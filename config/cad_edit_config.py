@@ -7,16 +7,16 @@ DEFAULT_CONFIG = {
     # 预训练模型路径
     "sd_path": "/home/lkh/siga/ckpt/sd15",
     "controlnet_path": "/home/lkh/siga/ckpt/controlnet_scribble",
-    "img_encoder_path": "/home/lkh/siga/ckpt/clip-vit-large-patch14",
+    "img_encoder_path": "/home/lkh/siga/ckpt/clip-vit-base-patch32",
     "projector_path": "/home/lkh/siga/ckpt/projector_weights.pth",
     
     # 训练controlnet路径名称
-    "parent_cn_path": "/home/lkh/siga/CADIMG/log",
+    "parent_cn_path": "/home/lkh/siga/output/log",
     "index": "0508_1848",
     
     # 测试图像
-    "test_img_dir": "/home/lkh/siga/dataset/deepcad/data/cad_controlnet01/init_img/",
-    "test_sketch_dir": "/home/lkh/siga/dataset/deepcad/data/cad_controlnet01/stroke_img/",
+    "test_img_path": "",
+    "test_sketch_path": "",
     "img_index": [0,4],
     
     # 输出路径
@@ -41,8 +41,8 @@ class AppConfig:
     index: str
     
     """测试图像"""
-    test_img_dir: str
-    test_sketch_dir: str
+    test_img_path: str
+    test_sketch_path: str
     img_index: list
 
     """输出路径"""
@@ -78,10 +78,10 @@ class AppConfig:
         parser.add_argument("--index",
                           default=defaults.index)
         
-        parser.add_argument("--test_img_dir", 
-                          default=defaults.test_img_dir)
-        parser.add_argument("--test_sketch_dir", 
-                          default=defaults.test_sketch_dir)
+        parser.add_argument("--test_img_path", 
+                          default=defaults.test_img_path)
+        parser.add_argument("--test_sketch_path", 
+                          default=defaults.test_sketch_path)
         parser.add_argument("--img_index", type=int, nargs='+', 
                           default=defaults.img_index)
         
@@ -103,8 +103,8 @@ class AppConfig:
             parent_cn_path=args.parent_cn_path,
             index=args.index,
             
-            test_img_dir=args.test_img_dir,
-            test_sketch_dir=args.test_sketch_dir,
+            test_img_path=args.test_img_path,
+            test_sketch_path=args.test_sketch_path,
             img_index=args.img_index,
 
             output_dir=args.output_dir,

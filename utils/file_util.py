@@ -22,6 +22,16 @@ def compare_sets(set1, set2):
     for name in sorted(only_in_pkl2):
         print("  ", name)
 
+def compare_sets_same(set1, set2):
+    for a in set1:
+        if a in set2:
+            print(a)
+    
+    print('---')
+
+    for a in set2:
+        if a in set1:
+            print(a)
 
 def get_set_from_pkl(pkl_path):
     with open(pkl_path, 'rb') as f:
@@ -109,9 +119,11 @@ if __name__ == "__main__":
     # for path in paths:
     #     path_dir = os.path.join(p, path)
     #     rm_dir_without_file(path_dir)
-    path1 = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_img_addbody/base'
-    path2 = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/init_img_sketch'
+    path1 = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/train_dataset/val/base_img'
+    path2 = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/train_dataset/val/target_img'
     # rm_dir(path2, path1)
     a = get_set_from_dir(path1)
     b = get_set_from_dir(path2)
     compare_sets(a,b)
+
+

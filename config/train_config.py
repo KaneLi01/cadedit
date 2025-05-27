@@ -6,24 +6,30 @@ from utils import log_util
 DEFAULT_CONFIG = {
     # 模型路径
     "sd_path": "/home/lkh/siga/ckpt/sd15",
-    "controlnet_path": "/home/lkh/siga/ckpt/controlnet_scribble",
-    "img_encoder_path": "/home/lkh/siga/ckpt/clip-vit-large-patch14",
+    "controlnet_path": "/home/lkh/siga/ckpt/controlnet_canny",
+    "img_encoder_path": "/home/lkh/siga/ckpt/clip-vit-base-patch32",
     "projector_path": "/home/lkh/siga/ckpt/projector_weights.pth",
     
     # 数据路径
-    "file_path": "/home/lkh/siga/dataset/deepcad/data/cad_controlnet02",
+    "file_path": "/home/lkh/siga/dataset/my_dataset/normals_train_dataset/train_dataset",
     
     # 输出配置
-    "parent_log_dir": "/home/lkh/siga/CADIMG/log",
-    "compare_log": "/home/lkh/siga/CADIMG/compare.log",
+    "parent_log_dir": "/home/lkh/siga/output/log",
+    "compare_log": "/home/lkh/siga/output/log/compare.log",
     
     # 训练参数
+    "mode": "train",
     "device": "cuda:0",
+    "res": 256,
     "num_epochs": 10,
     "batch_size": 4,
     "lam": 0.0,
-    
+    "lr": 1e-5,
+    "torch_dtype": "float32",
+    "weight_decay": 1e-2,
+
     # 其他
+    "debug": False,
     "tip": " "
 }
 
@@ -44,12 +50,18 @@ class AppConfig:
     compare_log: str
 
     """训练参数"""
+    mode: str
     device: str
+    res: int
     num_epochs: int
     batch_size: int
     lam: float
+    lr: float
+    torch_dtype: str
+    weight_decay: float
 
     """备注"""
+    debug: bool
     tip: str
     
 
@@ -83,15 +95,27 @@ class AppConfig:
         parser.add_argument("--compare_log", 
                           default=defaults.compare_log)
         
+        parser.add_argument("--mode", 
+                          default=defaults.mode)
         parser.add_argument("--device", 
                           default=defaults.device)
+        parser.add_argument("--res", type=int,
+                          default=defaults.res)
         parser.add_argument("--num_epochs",  type=int,
                           default=defaults.num_epochs)
         parser.add_argument("--batch_size",  type=int,
                           default=defaults.batch_size)
         parser.add_argument("--lam", type=float,
                           default=defaults.lam)
+        parser.add_argument("--lr", type=float,
+                          default=defaults.lr)
+        parser.add_argument("--torch_dtype", type=str,
+                          default=defaults.torch_dtype)
+        parser.add_argument("--weight_decay", type=float,
+                          default=defaults.weight_decay)
         
+        parser.add_argument("--debug", action="store_true",
+                          default=defaults.debug)
         parser.add_argument("--tip", 
                           default=defaults.tip)
         
@@ -107,11 +131,17 @@ class AppConfig:
             parent_log_dir=args.parent_log_dir,
             compare_log=args.compare_log,
 
+            mode=args.mode,
             device=args.device,
+            res=args.res,
             num_epochs=args.num_epochs,
             batch_size=args.batch_size,
             lam=args.lam,
+            lr=args.lr,
+            torch_dtype=args.torch_dtype,
+            weight_decay=args.weight_decay,
 
+            debug=args.debug,
             tip=args.tip,
         )
 
