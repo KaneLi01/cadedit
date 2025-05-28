@@ -17,10 +17,10 @@ import torchvision.transforms as T
 from torchvision import transforms
 from transformers import CLIPVisionModel, CLIPImageProcessor
 # from IPAdapter.ip_adapter.ip_adapter import IPAdapter
-from train_config import AppConfig
+from config.train_config import AppConfig
 
 from utils import log_util
-from datasets.controlnet_train import SketchControlNetDataset
+from dataset.img_sketch_dataset import SketchControlNetDataset
 
 seed = 42
 torch.manual_seed(seed)
@@ -116,14 +116,14 @@ if __name__ == "__main__":
             input = batch["original"].to(args.device, dtype=torch.float32)            
             sketch = batch["sketch"].to(args.device, dtype=torch.float32)
             target = batch["target"].to(args.device, dtype=torch.float32)
-            mask = batch["mask"].to(args.device, dtype=torch.float32)
+            #mask = batch["mask"].to(args.device, dtype=torch.float32)
 
             with torch.no_grad():
                 # 预处理图像,输入到pipe中
                 clip_input = clip_processor(images=input, return_tensors="pt").pixel_values.to(args.device)
                 image_embeds = clip_model(clip_input).last_hidden_state  
-                image_embeds = projector1(image_embeds.transpose(1, 2)).transpose(1, 2)  # [1, 77, 1024]
-                image_embeds = projector2(image_embeds)
+                # image_embeds = projector1(image_embeds.transpose(1, 2)).transpose(1, 2)  # [1, 77, 1024]
+                # image_embeds = projector2(image_embeds)
                 
             # Encode target image成latents
             latents = vae.encode(target).latent_dist.sample() * 0.18215
@@ -190,8 +190,8 @@ if __name__ == "__main__":
                     tsboard_writer.add_scalar('noise_loss', noise_loss.item(), step)
                     log_util.log_string(f"Epoch {epoch}, Step {step}, noise_loss: {noise_loss.item():.4f}", log_file)
 
-        # torch.save(train_pipe.controlnet.state_dict(), os.path.join(log_dir, "ckpt", f"controlnet_epoch{epoch}.pth"))
+        torch.save(train_pipe.controlnet.state_dict(), os.path.join(log_dir, "ckpt", f"controlnet_epoch{epoch}.pth"))
         # torch.save(train_pipe.unet.state_dict(), os.path.join(log_dir, "ckpt", f"unet_epoch{epoch}.pth"))
     torch.save(train_pipe.controlnet.state_dict(), os.path.join(log_dir, "ckpt", f"controlnet.pth"))
-    torch.save(train_pipe.unet.state_dict(), os.path.join(log_dir, "ckpt", f"unet.pth"))
+    #torch.save(train_pipe.unet.state_dict(), os.path.join(log_dir, "ckpt", f"unet.pth"))
     

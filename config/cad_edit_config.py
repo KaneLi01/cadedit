@@ -15,12 +15,12 @@ DEFAULT_CONFIG = {
     "index": "0508_1848",
     
     # 测试图像
-    "test_img_dir": "/home/lkh/siga/dataset/deepcad/data/cad_controlnet01/init_img/",
-    "test_sketch_dir": "/home/lkh/siga/dataset/deepcad/data/cad_controlnet01/stroke_img/",
-    "img_index": [0,4],
+    "test_img_dir": "/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_dark/test/base_img/",
+    "test_sketch_dir": "/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_dark/test/sketch_img",
+    "img_index": [0,2],
     
     # 输出路径
-    "output_dir": "/home/lkh/siga/CADIMG/infer",
+    "output_dir": "/home/lkh/siga/output/infer/test/0528",
     
     # 其他
     "device": "cpu",

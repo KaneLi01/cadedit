@@ -4,7 +4,7 @@ from PIL import Image
 import numpy as np
 from diffusers import StableDiffusionPipeline, ControlNetModel, StableDiffusionControlNetPipeline
 from transformers import CLIPVisionModel, CLIPImageProcessor
-from cad_edit_config import AppConfig
+from config.cad_edit_config import AppConfig
 import os
 from torch import nn
 
@@ -24,7 +24,7 @@ def load_inference_models(args):
     
     # 加载训练好的ControlNet
     controlnet = ControlNetModel.from_pretrained(args.controlnet_path)
-    trained_cn_path = os.path.join(args.parent_cn_path, args.index, "ckpt/controlnet.pth")  # 如果不是则需要修改
+    trained_cn_path = os.path.join(args.parent_cn_path, args.index, "ckpt/controlnet_epoch8.pth")  # 如果不是则需要修改
     controlnet.load_state_dict(torch.load(trained_cn_path))  
     
     # 加载投影器
@@ -110,7 +110,9 @@ if __name__ == "__main__":
     # 推理
     for i in range(args.img_index[0],args.img_index[1]):
         input_image_path = os.path.join(args.test_img_dir, f"{i:06d}.png")
-        sketch_image_path = os.path.join(args.test_sketch_dir, f"{i:06d}.png")          
+        sketch_image_path = os.path.join(args.test_sketch_dir, f"{i:06d}.png")    
+        input_image_path = '/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_dark/test/base_img/004800.png'
+        sketch_image_path = '/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_dark/test/sketch_img/004800.png'      
         
         output_path = os.path.join(args.output_dir, "lam", f"{args.index}_{i}.png")  # 输出图像路径
         
