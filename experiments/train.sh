@@ -7,8 +7,9 @@ DATA_DIR="/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_lig
 
 python /home/lkh/siga/CADIMG/experiments/scripts/train_cn.py\
         --file_path $DATA_DIR\
-        --tip simple_dataset_test_controlnet_ability\
+        --tip test_controlnet_ability\
         --torch_dtype float32\
-        --batch_size 6\
-        --res 256\
-        --num_epochs 30\
+        --batch_size 32\
+        --res 128\
+        --num_epochs 10\
+        --lr 2e-5

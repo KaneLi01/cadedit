@@ -54,8 +54,8 @@ def main():
 
     train_pipe = StableDiffusionControlNetPipeline(
         vae=models.vae,
-        text_encoder=models.text_encoder,
-        tokenizer=models.tokenizer,
+        text_encoder=None,
+        tokenizer=None,
         unet=models.unet,
         controlnet=models.controlnet,
         scheduler=models.scheduler,
@@ -124,23 +124,28 @@ def main():
             optimizer.step()
 
             if step % 50 == 0:
-                if step % 200 == 0:
-                    test_img_path = '/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_light/test/base_img/007200.png'
-                    test_sketch_path = '/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_light/test/sketch_img/007200.png'
-                    test_image = preprocess_image(test_img_path, args.device)
-                    test_sketch_image = transforms.Normalize([0.5], [0.5])(preprocess_image(test_sketch_path, args.device))
-                    with torch.no_grad():
-                        # 处理输入图像
-                        test_clip_input = models.clip_processor(images=test_image, return_tensors="pt").pixel_values.to(args.device)
-                        test_image_embeds = models.clip_model(test_clip_input).last_hidden_state
-                        output = train_pipe(
-                            prompt_embeds=test_image_embeds,
-                            image=test_sketch_image,
-                            num_inference_steps=20,
-                            guidance_scale=7.5,
-                        ).images[0]
 
-                        output.save(os.path.join(log_dir, "vis", f"{epoch}_{step}.png"))
+                test_img_path = '/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_light/test/base_img/007200.png'
+                test_sketch_path = '/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_light/test/sketch_img/007200.png'
+                test_image = preprocess_image(test_img_path, args.device)
+                test_sketch_image = transforms.Normalize([0.5], [0.5])(preprocess_image(test_sketch_path, args.device))
+                with torch.no_grad():
+                    # 处理输入图像
+                    test_clip_input = models.clip_processor(images=test_image, return_tensors="pt").pixel_values.to(args.device)
+                    test_image_embeds = models.clip_model(test_clip_input).last_hidden_state
+                    prompt_embeds = torch.cat([test_image_embeds, test_image_embeds], dim=0)
+                    pooled_prompt_embeds = test_image_embeds.mean(dim=1)
+                    output = train_pipe(
+                        prompt_embeds=prompt_embeds,
+                        pooled_prompt_embeds=pooled_prompt_embeds,
+                        negative_prompt_embeds=torch.zeros_like(prompt_embeds),
+                        negative_pooled_prompt_embeds=torch.zeros_like(pooled_prompt_embeds),
+                        image=test_sketch_image,
+                        num_inference_steps=20,
+                        guidance_scale=7.5,
+                    ).images[0]
+
+                    output.save(os.path.join(log_dir, "vis", f"{epoch}_{step}.png"))
                 tsboard_writer.add_scalar('noise_loss', noise_loss.item(), step)
                 log_util.log_string(f"Epoch {epoch}, Step {step}, noise_loss: {noise_loss.item():.4f}", log_file)
         torch.save(train_pipe.controlnet.state_dict(), os.path.join(log_dir, "ckpt", f"controlnet_epoch{epoch}.pth"))

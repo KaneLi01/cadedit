@@ -24,8 +24,8 @@ class Diffusion_Models:
         self.vae = self.pipe.vae.to(args.device)
         self.unet = self.pipe.unet.to(args.device)
         self.scheduler = self.pipe.scheduler
-        self.text_encoder = self.pipe.text_encoder.to(args.device)
-        self.tokenizer = self.pipe.tokenizer
+        # self.text_encoder = self.pipe.text_encoder.to(args.device)
+        # self.tokenizer = self.pipe.tokenizer
 
         self.controlnet = ControlNetModel.from_pretrained(
             args.controlnet_path,
