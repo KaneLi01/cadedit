@@ -6,7 +6,7 @@ from utils import log_util
 DEFAULT_CONFIG = {
     # 预训练模型路径
     "sd_path": "/home/lkh/siga/ckpt/sd15",
-    "controlnet_path": "/home/lkh/siga/ckpt/controlnet_scribble",
+    "controlnet_path": "/home/lkh/siga/ckpt/controlnet_canny",
     "img_encoder_path": "/home/lkh/siga/ckpt/clip-vit-base-patch32",
     "projector_path": "/home/lkh/siga/ckpt/projector_weights.pth",
     
@@ -22,6 +22,9 @@ DEFAULT_CONFIG = {
     # 输出路径
     "output_dir": "/home/lkh/siga/CADIMG/infer",
     
+    # 模型
+    "torch_dtype": "torch32", 
+
     # 其他
     "device": "cpu",
     "tip": " "
@@ -47,6 +50,9 @@ class AppConfig:
 
     """输出路径"""
     output_dir: str
+
+    """模型"""
+    torch_dtype: str
 
     """备注"""
     device: str
@@ -88,6 +94,9 @@ class AppConfig:
         parser.add_argument("--output_dir", 
                           default=defaults.output_dir)
         
+        parser.add_argument("--torch_dtype", 
+                          default=defaults.torch_dtype)
+        
         parser.add_argument("--device", 
                           default=defaults.device)
         parser.add_argument("--tip", 
@@ -108,6 +117,8 @@ class AppConfig:
             img_index=args.img_index,
 
             output_dir=args.output_dir,
+
+            torch_dtype=args.torch_dtype,
 
             device=args.device,
             tip=args.tip,

@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torch import nn
 from torchvision import transforms
-from diffusers import StableDiffusionPipeline, ControlNetModel, StableDiffusionControlNetPipeline
+from diffusers import StableDiffusionPipeline, ControlNetModel, StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline
 from transformers import CLIPVisionModel, CLIPImageProcessor
 
 from models.diffusion import Diffusion_Models
@@ -30,8 +30,8 @@ def load_inference_models(args):
     
     # 加载训练好的ControlNet
     controlnet = ControlNetModel.from_pretrained(args.controlnet_path)
-    trained_cn_path = os.path.join(args.parent_cn_path, args.index, "ckpt/controlnet_epoch3.pth")  # 如果不是则需要修改
-    controlnet.load_state_dict(torch.load(trained_cn_path))  
+    trained_cn_path = os.path.join(args.parent_cn_path, args.index, "ckpt/controlnet.pth")  # 如果不是则需要修改
+    controlnet.load_state_dict(torch.load(trained_cn_path))
     
     # 加载投影器
     projector_ckpt = torch.load(args.projector_path, map_location=args.device)
@@ -51,10 +51,11 @@ def load_inference_models(args):
     #         return_tensors="pt",
     #     ).input_ids.to(args.device)
 
+    # inference_pipe = StableDiffusionControlNetPipeline(
     inference_pipe = StableDiffusionControlNetPipeline(
         vae=pipe.vae,
-        text_encoder=None,
-        tokenizer=None,
+        text_encoder=pipe.text_encoder,
+        tokenizer=pipe.tokenizer,
         unet=pipe.unet,
         controlnet=controlnet,
         scheduler=pipe.scheduler,
@@ -68,24 +69,23 @@ def load_inference_models(args):
 def preprocess_image(image_path, device):
     image = Image.open(image_path).convert("RGB")
     transform = transforms.Compose([
-        transforms.Resize((256, 256)),
+        transforms.Resize((128, 128)),
         transforms.ToTensor(),
     ])
     return transform(image).unsqueeze(0).to(device)
 
 # 推理函数
 def infer(args, input_image_path, sketch_image_path, output_path, models, num_inference_steps=20, guidance_scale=7.5):
-    models = Diffusion_Models(args)
+    clip_model, clip_processor, inference_pipe, projector1, projector2 = load_inference_models(args)
     
     # 预处理输入图像
     input_image = preprocess_image(input_image_path, args.device)
-    # sketch_image = transforms.Normalize([0.5], [0.5])(preprocess_image(sketch_image_path, args.device))
-    sketch_image = preprocess_image(sketch_image_path, args.device)
+    sketch_image = transforms.Normalize([0.5], [0.5])(preprocess_image(sketch_image_path, args.device))
     # 生成图像嵌入
     with torch.no_grad():
         # 处理输入图像
-        clip_input = models.clip_processor(images=input_image, return_tensors="pt").pixel_values.to(args.device)
-        image_embeds = models.clip_model(clip_input).last_hidden_state
+        clip_input = clip_processor(images=input_image, return_tensors="pt").pixel_values.to(args.device)
+        image_embeds = clip_model(clip_input).last_hidden_state
         # image_embeds = projector1(image_embeds.transpose(1, 2)).transpose(1, 2)
         # image_embeds = projector2(image_embeds)
 
@@ -93,12 +93,12 @@ def infer(args, input_image_path, sketch_image_path, output_path, models, num_in
         pooled_prompt_embeds = image_embeds.mean(dim=1)
 
         # 生成图像
-        output = models.pipe(
+        print(prompt_embeds.shape)
+        print(sketch_image.shape)
+
+        output = inference_pipe(
             prompt_embeds=prompt_embeds,
-            pooled_prompt_embeds=pooled_prompt_embeds,
-            negative_prompt_embeds=torch.zeros_like(prompt_embeds),  # 简单使用零作为负提示
-            negative_pooled_prompt_embeds=torch.zeros_like(pooled_prompt_embeds),
-            image=sketch_image,
+            image=sketch_image,  # 控制图像
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
         ).images[0]

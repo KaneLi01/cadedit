@@ -7,5 +7,6 @@ SKETCH="/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_light
 python /home/lkh/siga/CADIMG/experiments/scripts/cad_edit.py \
         --test_img_path "$BASE" \
         --test_sketch_path "$SKETCH" \
-        --index "0526_2335" \
-        --device "cuda"
+        --index "0528_0010" \
+        --device "cuda" \
+        --torch_dtype "torch32"
