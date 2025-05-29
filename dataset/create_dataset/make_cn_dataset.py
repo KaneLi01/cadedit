@@ -16,6 +16,8 @@ from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 
 
 
+
+
 class ImageProcessor:
     def __init__(self, file_path, output_dir, edit_type='add', edit_path=None, shape_name=None):
         """
