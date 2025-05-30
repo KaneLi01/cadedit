@@ -1,0 +1,4 @@
+vaild_train_dataset_names.json
+记录有效shape名称，由若干字典组成，每个字典的 键'file_names' 代表根据 键'explaination' 筛选出的shape
+- init dataset：初步筛选出的9187个文件
+- complex：筛选复杂的面数

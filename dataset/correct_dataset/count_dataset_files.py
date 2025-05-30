@@ -38,6 +38,11 @@ result['file_names'] = list(set(result['file_names']))
 l2 = len(result['file_names'])
 print("总文件数为:", l2)
 
-with open (json_path, "a") as f:
-    json.dump(result, f)
+
+with open(json_path, 'r') as file:
+    current_data = json.load(file)  # data 是一个列表，列表的元素是字典
+current_data.append(result)
+
+with open (json_path, "w") as f:
+    json.dump(current_data, f, indent=4)
     f.write("\n")

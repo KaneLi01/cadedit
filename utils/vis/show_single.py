@@ -3,9 +3,9 @@ import h5py
 import random
 import numpy as np
 from OCC.Display.SimpleGui import init_display
-import sys
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-sys.path.append("..")
 from cadlib.extrude import CADSequence
 from cadlib.visualize import vec2CADsolid, create_CAD, get_wireframe_from_body
 from cadlib.Brep_utils import get_BRep_from_file, get_points_from_BRep, get_wireframe
@@ -149,19 +149,13 @@ def save_BRep_wire_img(wire_list, output_path=None, seed=42):
 
 
 # 用save_BRep_img保存，这个用于交互式渲染
-def show_BRep(out_shape, show_type, display=None, save_path=None):
-    if display is None:
-        display, start_display, _, _ = init_display()
-        close_display = True
-    else:
-        close_display = False
+def show_BRep(out_shape, show_type='body', save_path=None):
+    display, start_display, _, _ = init_display()
 
     # 设置随机浅色背景
     r, g, b = random.uniform(0.7, 1.0), random.uniform(0.7, 1.0), random.uniform(0.7, 1.0)
     bg_color = Quantity_Color(r, g, b, Quantity_TOC_RGB)
     display.View.SetBgGradientColors(bg_color,bg_color)
-    # display.View.SetBackgroundColor(bg_color)
-
 
     # 设置摄像机
     display.View.SetEye(1, 1, 1)  
@@ -176,15 +170,12 @@ def show_BRep(out_shape, show_type, display=None, save_path=None):
     if show_type == "body":
         ais_out_shape = display.DisplayShape(out_shape, update=False, color=get_mechanical_color(MECHANICAL_COLORS))
 
-    display.View.TriedronErase()  # 清除坐标轴
 
     if save_path is not None:
         # 保存
         display.Repaint()
         display.View.Dump(save_path)
-        display.EraseAll()  # 清除显示内容
-        if close_display:
-            display.Context.Delete()  # 完全关闭显示上下文
+
     else:    
         start_display()
 

@@ -51,6 +51,22 @@ def create_CAD(cad_seq: CADSequence):
     return body
 
 
+# 直接从子seq创建数据
+def create_CAD_by_seq(sub_seq):
+    """create a 3D CAD model from CADSequence. Only support extrude with boolean operation."""
+    body = create_by_extrude(sub_seq[0])
+    for extrude_op in sub_seq[1:]:
+        new_body = create_by_extrude(extrude_op)
+        if extrude_op.operation == EXTRUDE_OPERATIONS.index("NewBodyFeatureOperation") or \
+                extrude_op.operation == EXTRUDE_OPERATIONS.index("JoinFeatureOperation"):
+            body = BRepAlgoAPI_Fuse(body, new_body).Shape()
+        elif extrude_op.operation == EXTRUDE_OPERATIONS.index("CutFeatureOperation"):
+            body = BRepAlgoAPI_Cut(body, new_body).Shape()
+        elif extrude_op.operation == EXTRUDE_OPERATIONS.index("IntersectFeatureOperation"):
+            body = BRepAlgoAPI_Common(body, new_body).Shape()
+    return body
+
+
 def create_by_extrude(extrude_op: Extrude):
     # 执行单个extrude
     """create a solid body from Extrude instance."""
