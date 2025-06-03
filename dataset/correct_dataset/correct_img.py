@@ -78,10 +78,10 @@ def correct_normal_bg_img(obj_img_path, output_img_path):
 
     cv2.imwrite(os.path.join(output_img_path), result)
 
-def correct_normal_bg_dataset():
-    init_normal_img_dir = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_img_addbody_init'
-    output_dir = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_img_addbody'
+def correct_normal_bg_dataset(init_normal_img_dir, output_dir):
+
     type_name = os.listdir(init_normal_img_dir)  # base
+    type_name = ["base"]
     for t in type_name:
         type_path = os.path.join(init_normal_img_dir, t)  
         cad_name = os.listdir(type_path)   #00000001
@@ -99,7 +99,9 @@ def correct_normal_bg_dataset():
 
 
 def main():
-    correct_sketch_dataset()
+    init_normal_img_dir = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_img_addbody_6views_init'
+    output_dir = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_img_addbody_6views'
+    correct_normal_bg_dataset(init_normal_img_dir, output_dir)
 
 
 if __name__ == '__main__':

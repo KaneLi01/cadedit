@@ -28,8 +28,8 @@ class CorrectDataFromJSON():
         self.shapes = [Brep_utils.get_BRep_from_seq(sub_seq) for sub_seq in self.sub_seqs]
 
 
-
     def filter_slice(self, shortest=0.04, scale=15):
+    # 筛选薄面、很小的对象
         for shape in self.shapes:
             xmin, ymin, zmin, xmax, ymax, zmax = Brep_utils.get_bbox(shape)
             dx, dy, dz = xmax-xmin, ymax-ymin, zmax-zmin
@@ -43,6 +43,7 @@ class CorrectDataFromJSON():
 
 
     def filter_complex_faces(self, thre=30):
+    # 筛选复杂的面
         for shape in self.shapes:
             num_face = len(Brep_utils.get_faces_from_BRep(shape))
             if num_face > thre:
@@ -51,6 +52,7 @@ class CorrectDataFromJSON():
 
 
 def filter_data():
+
     # 用现有的shape再过滤
     ref_filter_file = '/home/lkh/siga/CADIMG/dataset/correct_dataset/vaild_train_dataset_names.json'
     init_explaination = "init dataset"
@@ -86,7 +88,6 @@ def filter_data():
 
     with open(ref_filter_file, 'w') as f:
         json.dump(result, f, indent=4)  # 加 indent 让结果更可读
-
 
 
 def test():

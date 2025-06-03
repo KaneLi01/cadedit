@@ -8,15 +8,14 @@ PLY_DIR_PARENT='/home/lkh/siga/dataset/my_dataset/cad_ply/addbody'
 VIEW_PATH='/home/lkh/siga/CADIMG/dataset/create_dataset/render_normal/views_correct.pkl'
 CENTER_PATH='/home/lkh/siga/CADIMG/dataset/create_dataset/render_normal/centers_correct.pkl'
 OUT_DIR='/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_h5_addbody_6views'
-CORRECT_INDEX='/home/lkh/siga/CADIMG/dataset/correct_dataset/vaild_train_dataset_names.json'
+CORRECT_INDEX='/home/lkh/siga/CADIMG/dataset/correct_dataset/vaild_train_dataset_names_copy3.json'
 
 
-# for file in "$PLY_DIR"/*.ply; do
-for file in "$PLY_DIR"/00025360.ply; do
+for file in "$PLY_DIR"/*.ply; do
     file_name=$(basename "$file" .ply)
     echo "Processing file: $file_name"
     for SHAPE_TYPE  in 'base' 'operate' 'result'; do
-    # for SHAPE_TYPE in 'result'; do
+    # for SHAPE_TYPE in 'base'; do
     # 渲染三种不同形状
 
         DIR="${HDF5_DIR}/${SHAPE_TYPE}/${file_name}/"
@@ -26,7 +25,7 @@ for file in "$PLY_DIR"/00025360.ply; do
         blenderproc run render_normal.py --shape_type "${SHAPE_TYPE}" --ply_name "${file_name}" \
         --view_path "${VIEW_PATH}" --center_path "${CENTER_PATH}" --ply_dir "${PLY_DIR_PARENT}" --output_dir "${OUT_DIR}" --correct_index "${CORRECT_INDEX}"
         # 从h5文件中渲染图片
-        blenderproc vis hdf5 "${DIR}0.hdf5" "${DIR}1.hdf5" "${DIR}2.hdf5"  "${DIR}3.hdf5" "${DIR}4.hdf5"  "${DIR}5.hdf5" --keys "normals" --save "${OUTPUT_DIR}"
+        # blenderproc vis hdf5 "${DIR}0.hdf5" "${DIR}1.hdf5" "${DIR}2.hdf5"  "${DIR}3.hdf5" "${DIR}4.hdf5"  "${DIR}5.hdf5" --keys "normals" --save "${OUTPUT_DIR}"
 
 
         # python /home/lkh/siga/CADIMG/utils/file_util.py --path "${OUTPUT_DIR}"
