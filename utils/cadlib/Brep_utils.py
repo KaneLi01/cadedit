@@ -67,40 +67,6 @@ def get_faces_from_BRep(shape):
     return faces
 
 
-def get_wireframe_from_body(shape):
-    """
-    通用方法：从 Shape/Compound 提取线框（Wire）
-    支持以下输入类型：
-        - 独立 Solid/Face/Wire/Edge
-        - Compound（包含多个子几何体）
-    """
-    # Case 1: 如果本身就是 Wire，直接返回
-    if shape.ShapeType() == TopAbs_WIRE:
-        return TopoDS_Wire(shape)
-    
-    # Case 2: 处理 Compound 或包含多边的形状
-    wire_builder = BRepBuilderAPI_MakeWire()
-    explorer = TopExp_Explorer(shape, TopAbs_EDGE)
-    
-    while explorer.More():
-        # 正确转换方式：使用 topods_Edge() 函数
-        edge = TopoDS_Wire(explorer.Current())
-        wire_builder.Add(edge)
-        explorer.Next()
-    
-    if wire_builder.IsDone():
-        return wire_builder.Wire()
-    
-    # Case 3: 尝试从 Solid/Face 提取外轮廓
-    try:
-        return breptools_OuterWire(shape)
-    except:
-        pass
-    
-    # Case 4: 其他情况抛出异常
-    raise RuntimeError("无法从该形状提取线框")
-
-
 
 
 
@@ -124,3 +90,4 @@ def get_bbox(shape: TopoDS_Compound):
     xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
     
     return (xmin, ymin, zmin, xmax, ymax, zmax)
+

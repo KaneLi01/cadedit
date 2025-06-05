@@ -115,6 +115,60 @@ def save_BRep_img(shape, output_path=None, seed=42):
     offscreen_renderer.View.Dump(output_path)
 
 
+def save_BRep_wire_img_temp(wire_list, campos=[2,2,2], seeat=[0,0,0],output_path=None):
+    
+    offscreen_renderer = Viewer3d()  # 离线渲染
+    offscreen_renderer.Create()  # 初始化
+    # 设置渲染模式为阴影模式，显示面信息
+    offscreen_renderer.SetModeShaded()
+    offscreen_renderer.SetSize(512, 512)
+    offscreen_renderer.View.SetScale(400)
+    offscreen_renderer.SetPerspectiveProjection()
+
+    # 设置摄像机
+    offscreen_renderer.View.SetEye(campos[0], campos[1], campos[2])  # 设置摄像机位置
+    offscreen_renderer.View.SetAt(seeat[0], seeat[1], seeat[2]) 
+    offscreen_renderer.View.SetOrthographicProjection()
+
+    # 设置背景颜色
+    bg_color = get_random_color(1.0, 1.0)
+    offscreen_renderer.View.SetBgGradientColors(bg_color,bg_color)
+
+    # 绘制线框为黑色（保证离散形状的线框）
+    for edge in wire_list:
+        ais_edge = AIS_Shape(edge)
+        ais_edge.SetWidth(2.0)  # 设置线宽
+        ais_edge.SetColor(Quantity_Color(Quantity_NOC_BLACK))
+        offscreen_renderer.Context.Display(ais_edge, False)
+
+    offscreen_renderer.Repaint()
+    offscreen_renderer.View.Dump(output_path)
+
+
+def save_BRep_wire_img_display_temp(wire_list, campos=[2,2,2], seeat=[0,0,0],output_path=None):
+    
+    display, start_display, _, _ = init_display(size=(512,512))
+    
+
+    # 设置摄像机
+    display.View.SetEye(campos[0], campos[1], campos[2])  # 设置摄像机位置
+    display.View.SetAt(seeat[0], seeat[1], seeat[2]) 
+    # display.View.SetScale(1000)
+    display.SetPerspectiveProjection()
+
+    # 设置背景颜色
+    bg_color = get_random_color(1.0, 1.0)
+    display.View.SetBgGradientColors(bg_color,bg_color)
+
+
+    # 绘制线框为黑色（保证离散形状的线框）
+    for edge in wire_list:
+        display.DisplayShape(edge, update=False, color="black")
+
+    display.Repaint()
+    display.View.Dump(output_path)
+
+
 def save_BRep_wire_img(wire_list, output_path=None, seed=42):
     random.seed(seed)  # 确保每个数据的初始和修改后相同
     

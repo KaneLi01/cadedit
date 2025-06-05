@@ -1,8 +1,12 @@
-from utils import log_util
-from vis import show_single
+
+
 from torch.utils.tensorboard import SummaryWriter
 import datetime
-import os
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from utils import log_util
+from utils.vis import show_single
+import utils.cadlib.Brep_utils as Brep_utils
 from torchvision import transforms
 import torch
 from PIL import Image
@@ -315,295 +319,6 @@ def render_faces_to_image(faces_info, image_path="rendered.png", resolution=(512
     print(f"已保存图像: {image_path}")
 
 
-def build_plane_frame(normal):
-    # 以 normal 为法向量，在该平面上建立局部 u,v 坐标系
-    normal = normal / np.linalg.norm(normal)
-    if np.allclose(normal, [0, 0, 1]):
-        u = np.array([1, 0, 0])
-    else:
-        u = np.cross(normal, [0, 0, 1])
-        u /= np.linalg.norm(u)
-    v = np.cross(normal, u)
-    return u, v
-
-
-def project_point_to_plane(P, plane_normal, point_on_plane):
-    """
-    P: 要投影的3D点
-    plane_normal: 平面法向量 (A, B, C)，必须是单位向量
-    point_on_plane: 平面上的任意一点
-    """
-    P = np.array(P)
-    n = np.array(plane_normal)
-    n = n / np.linalg.norm(n)  # 单位化
-    v = P - point_on_plane
-    distance = np.dot(v, n)
-    projection = P - distance * n
-    return projection
-
-
-def project_to_custom_plane(verts3d, plane_normal=(1, 1, 1), plane_offset=3):
-    plane_normal = np.array(plane_normal)
-    point_on_plane = plane_normal / np.dot(plane_normal, plane_normal) * plane_offset
-    u, v = build_plane_frame(plane_normal)
-
-    points_2d = []
-    for P in verts3d:
-        P_proj = project_point_to_plane(P, plane_normal, point_on_plane)
-        local_u = np.dot(P_proj - point_on_plane, u)
-        local_v = np.dot(P_proj - point_on_plane, v)
-        points_2d.append((local_u, local_v))
-    return points_2d
-
-
-# def project_to_2d(verts3d):
-#     return [(v[0], v[2]) for v in verts3d]
-
-def project_to_2d(verts3d):
-    return project_to_custom_plane(verts3d, plane_normal=(1, 1, 1), plane_offset=3)
-
-
-def normal_to_rgb(normal):
-    # normal 是一个长度为3的 numpy 向量，值域为 [-1, 1]
-    rgb = ((normal + 1) / 2 * 255).astype(np.uint8)  # 映射到 [0, 255]
-    return tuple(int(c) for c in rgb[::-1]) 
-
-def render_normal_map(faces, img_size=(512, 512)):
-    import cv2
-    img = np.zeros((img_size[1], img_size[0], 3), dtype=np.uint8)  # 创建图片
-
-    # 坐标变换（将模型投影到图像中心）
-    all_pts = np.concatenate([np.array(project_to_2d(f['verts'])) for f in faces])  # 所有点坐标
-    min_xy = all_pts.min(axis=0)
-    max_xy = all_pts.max(axis=0)
-    dxy = max_xy - min_xy
-    scale = min(img_size[0] / (max_xy[0] - min_xy[0] + 1e-5),
-                img_size[1] / (max_xy[1] - min_xy[1] + 1e-5)) * 0.75  # 最长包围边缩放到图像大小的0.75
-
-    offset = (np.array(img_size) - dxy * scale)  / 2.0 
-
-
-    for f in faces:
-        pts2d = np.array(project_to_2d(f['verts']))
-        pts2d = (pts2d - min_xy) * scale
-        pts2d = offset + pts2d  
-
-        pts_int = np.array(pts2d, dtype=np.int32)
-        color = normal_to_rgb(f['normal'])
-
-        cv2.fillConvexPoly(img, pts_int, color) # 填充颜色
-
-    return img
-
-
-def visualize_with_open3d(faces_info):
-    import open3d as o3d
-    # 创建Open3D三角形网格对象
-    mesh = o3d.geometry.TriangleMesh()
-    
-    # 收集所有顶点
-    vertices = np.vstack([face['verts'] for face in faces_info])
-    # 创建三角形索引 (每3个顶点构成一个三角形)
-    triangles = np.array([[i, i+1, i+2] for i in range(0, len(vertices), 3)])
-    
-    mesh.vertices = o3d.utility.Vector3dVector(vertices)
-    mesh.triangles = o3d.utility.Vector3iVector(triangles)
-    
-    # 计算顶点法线 (可选)
-    mesh.compute_vertex_normals()
-    
-    # 可视化
-    o3d.visualization.draw_geometries([mesh])
-
-
-def visualize_with_plt(faces_info):
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection='3d')
-    
-    # 为每个三角形创建多边形
-    for face in faces_info:
-        verts = face['verts']
-        color = face['color']
-        # 创建三角形多边形
-        tri = Poly3DCollection([verts], alpha=1.0)
-        # 设置颜色 (需要确保颜色值在0-1之间)
-        tri.set_color(color) # 黑色边线
-        ax.add_collection3d(tri)
-    
-    # 自动缩放视图
-    ax.auto_scale_xyz([v[0] for face in faces_info for v in face['verts']],
-                     [v[1] for face in faces_info for v in face['verts']],
-                     [v[2] for face in faces_info for v in face['verts']])
-    
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    plt.axis('off')
-    plt.show()
-
-
-def visualize_with_matplotlib(faces_info):
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    
-    # 收集所有三角形
-    triangles = []
-    for face in faces_info:
-        triangles.append(face['verts'])
-    
-    # 创建多边形集合
-    poly = Poly3DCollection(triangles, alpha=0.8)
-    ax.add_collection3d(poly)
-    
-    # 设置坐标轴范围
-    all_verts = np.vstack([face['verts'] for face in faces_info])
-    ax.auto_scale_xyz(all_verts[:,0], all_verts[:,1], all_verts[:,2])
-    
-    # 可选：显示法线
-    # for face in faces_info[:100]:  # 限制显示的法线数量以免太密集
-    #     centroid = np.mean(face['verts'], axis=0)
-    #     ax.quiver(*centroid, *face['normal'], length=0.1, color='r')
-    
-    plt.tight_layout()
-    plt.show()
-
-
-
-def test_AABB():
-    '''测试并可视化包围盒'''
-    name = '00902881'
-    file_dir = "/home/lkh/siga/dataset/deepcad/data/cad_json/"
-    file_dir = os.path.join(file_dir, name[:4])
-    file_path = os.path.join(file_dir, name+'.json')
-    shape = get_BRep_from_file(file_path)
-    aabb_box = create_AABB_box(shape)
-
-    aabb_wires = get_wireframe(aabb_box)
-    
-    display, start_display, _, _ = init_display()
-
-    for edge in aabb_wires:
-        display.DisplayShape(edge, update=True, color="black")
-
-
-    display.DisplayShape(shape, update=True)
-    start_display()
-
-
-def test_volume():
-    '''测试相交体积'''
-    shape1, shape2 = create_2_box()
-    body = BRepAlgoAPI_Common(shape1, shape2).Shape()
-    props = GProp_GProps()
-    brepgprop.VolumeProperties(body, props)
-    print(props.Mass())
-
-
-def test_shape_distance():
-    '''测试两个shape之间的最短距离'''
-    '''创建两个box作为shape'''
-    shape1, shape2 = create_2_box()
-
-    # 计算两个box的最小距离
-    dist = BRepExtrema_DistShapeShape(shape1, shape2)
-    if dist.IsDone() and dist.Value() < 1e-6:  # 考虑浮点误差
-        print(dist.Value())
-    else: print(dist.Value())
-
-
-def test_normal():
-    name = '00902881'
-    file_dir = "/home/lkh/siga/dataset/deepcad/data/cad_json/"
-    file_dir = os.path.join(file_dir, name[:4])
-    file_path = os.path.join(file_dir, name+'.json')
-    shape = get_BRep_from_file(file_path)
-
-    display, start_display, _, _ = init_display()
-    display.DisplayShape(shape, update=True)
-
-    # 添加法向量显示
-
-    start_display()
-
-
-def test_depth():
-    '''测试计算深度图'''
-    import os
-
-    name = '00902881'
-    file_dir = "/home/lkh/siga/dataset/deepcad/data/cad_json/"
-    file_dir = os.path.join(file_dir, name[:4])
-    file_path = os.path.join(file_dir, name+'.json')
-    shape = get_BRep_from_file(file_path)
-
-    display, start_display, _, _ = init_display()
-    display.DisplayShape(shape, update=False)
-    # 提取 depth map
-    depth_map = render_depth_map(display, width=640, height=480)
-
-    if depth_map is not None:
-        import matplotlib.pyplot as plt
-        plt.imshow(depth_map, cmap='gray')
-        plt.title('Depth Map')
-        plt.colorbar()
-        plt.show()
-
-    start_display()
-
-
-def test_show():
-    '''测试并可视化包围盒'''
-    from OCC.Core.Image import Image_PixMap
-    from OCC.Core.V3d import V3d_View
-    from OCC.Core.Image import Image_PixMap, Image_Format
-
-    shape, _ = create_2_box()
-
-    offscreen_renderer = Viewer3d()  # 离线渲染
-    offscreen_renderer.Create()  # 初始化
-    # 设置渲染模式为阴影模式，显示面信息
-    offscreen_renderer.SetModeShaded()
-    offscreen_renderer.SetSize(512, 512)
-
-
-
-    from OCC.Core.Quantity import Quantity_Color, Quantity_TOC_RGB, Quantity_NOC_BLACK
-    bg_color = Quantity_Color(1, 1, 1, Quantity_TOC_RGB)
-    offscreen_renderer.View.SetBgGradientColors(bg_color,bg_color)
-    offscreen_renderer.DisplayShape(shape, update=True)
-
-
-    offscreen_renderer.View.SetEye(10, 10, 10)  
-    offscreen_renderer.View.SetAt(1, 1, 1)  
-    offscreen_renderer.View.SetScale(50)
-
-
-    offscreen_renderer.Repaint()
-    pix_map = Image_PixMap()
-    success = offscreen_renderer.View.DumpZBuffer(pix_map)
-
-    width, height = 512, 512
-
-    pixel_data = np.zeros((height, width), dtype=np.float32)
-    glReadPixels(
-        0, 0,                  # 起始坐标
-        width, height,         # 读取区域大小
-        GL_DEPTH_COMPONENT,                # 格式：RGB
-        GL_FLOAT,      # 数据类型：0-255
-        pixel_data             # 目标缓冲区
-    )
-    pixel_data = np.flipud(pixel_data)
-    image = Image.fromarray(pixel_data, 'RGB')
-    image.save('/home/lkh/siga/CADIMG/test/output.png')
-
-    offscreen_renderer.View.Dump('/home/lkh/siga/CADIMG/test/output0.png')
-
 
 def test_mesh():
     from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
@@ -638,31 +353,6 @@ def test_mesh():
 
     offscreen_renderer.View.Dump('/home/lkh/siga/CADIMG/test/output1.png')
 
-
-def test_stl():
-    from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
-    from OCC.Core.StlAPI import StlAPI_Writer
-    from OCC.Core.TopoDS import TopoDS_Shape
-    from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
-    from OCC.Core.BRep import BRep_Tool
-    import cv2
-    name = '00902881'
-    file_dir = "/home/lkh/siga/dataset/deepcad/data/cad_json/"
-    file_dir = os.path.join(file_dir, name[:4])
-    file_path = os.path.join(file_dir, name+'.json')
-    shape = get_BRep_from_file(file_path)
-
-    # mesh = BRepMesh_IncrementalMesh(shape, 0.1)
-    # mesh.Perform()
-
-    # display, start_display, _, _ = init_display()
-    # display.DisplayShape(shape, update=True)
-    # start_display()
-
-    faces_info = get_faces_and_normals(shape)
-    render_faces_to_image(faces_info, '/home/lkh/siga/CADIMG/test/1.png')
-
-    # visualize_with_matplotlib(faces_info)
 
 
 
@@ -701,21 +391,6 @@ def test_face():
     start_display()
 
 
-def test_output_stl():
-    from OCC.Core.StlAPI import StlAPI_Writer
-    from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
-    name = '00902881'
-    file_dir = "/home/lkh/siga/dataset/deepcad/data/cad_json/"
-    file_dir = os.path.join(file_dir, name[:4])
-    file_path = os.path.join(file_dir, name+'.json')
-    shape = get_BRep_from_file(file_path)
-
-    mesh = BRepMesh_IncrementalMesh(shape, 0.001)
-    mesh.Perform()
-
-    stl_writer = StlAPI_Writer()
-    stl_writer.SetASCIIMode(True)
-    stl_writer.Write(shape, "/home/lkh/siga/CADIMG/test/output1.stl")
 
 def test_makeface():
     from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_MakeWire, BRepBuilderAPI_MakeFace
@@ -749,29 +424,6 @@ def test_wire():
     
     start_display()
 
-
-def test_co():
-    shape, _ = create_2_box()
-    display, start_display, add_menu, add_function_to_menu = init_display()
-    
-    # display.SetModeShaded()
-
-
-    # random_dir = gp_Dir(1, 0, 0)
-    # light = V3d_DirectionalLight(random_dir, Quantity_Color(1, 0, 0, Quantity_TOC_RGB), True)  # 创建光源
-    # light.SetIntensity(1.0)  # 设置光强
-    # display.Viewer.AddLight(light)  # 将光源添加到渲染器
-    # display.Viewer.SetLightOff()  # 打开光源
-
-
-    display.DisplayShape(shape, update=True, color=rgb_color(0.5, 0.5, 1))
-
-    display.View.SetEye(10, 10, 10)  # 设置摄像机位置
-    display.View.SetAt(1, 1, 0) 
-    display.View.SetScale(400)
-
-    display.Repaint()
-    start_display()
 
 
 
@@ -875,69 +527,74 @@ def test_exp():
                     [-1, 0, 0],
                     [0, 0, 1]])  # 绕 Z 轴逆时针旋转 90 度
 
-def test_ma():
-    def coordinate_transform(A, B, v_a):
+
+
+def test_sketch_render(shape_name, view_num=0):
+    # 查看sketch是否和normal匹配
+    '''
+    先查看合适的形状，然后检查normal是否和sketch重合
+    '''
+    import pickle
+    import copy
+
+    def get_pkl(path, name):
+        with open(path, 'rb') as f:
+            data_dict = pickle.load(f)
+        return data_dict[name]
+
+    VIEW_CORNERS_6 = {
+        'front': [ # front
+            [2.0,-2*sqrt(2),0.0], [2.0,-2.0,2.0], [2.0,0.0,2*sqrt(2)], [2.0,2.0,2.0], [2.0,2*sqrt(2),0.0], [2.0,0.0,-2*sqrt(2)]  
+        ],
+
+        'back': [ # back
+            [-2.0,-2*sqrt(2),0.0], [-2.0,-2.0,2.0], [-2.0,0.0,2*sqrt(2)], [-2.0,2.0,2.0], [-2.0,2*sqrt(2),0.0], [-2.0,0.0,-2*sqrt(2)]
+        ],
+
+        'right': [ # right
+            [0.0,2.0,2*sqrt(2)], [2.0,2.0,2.0], [2*sqrt(2),2.0,0.0], [2.0,2.0,-2.0], [0.0,2.0,-2*sqrt(2)], [-2*sqrt(2),2.0,0.0]
+        ],
+        
+        'left': [ # left
+            [0.0,-2.0,2*sqrt(2)], [2.0,-2.0,2.0], [2*sqrt(2),-2.0,0.0], [2.0,-2.0,-2.0], [0.0,-2.0,-2*sqrt(2)], [-2*sqrt(2),-2.0,0.0]
+        ],
+
+        'up': [ # up
+            [0.0,-2*sqrt(2),2.0], [2.0,-2.0,2.0], [2*sqrt(2),0,2.0], [2.0,2.0,2.0], [0.0,2*sqrt(2),2.0], [-2*sqrt(2),0.0,2.0]
+        ],
+        
+        'down': [ # down
+            [0.0,-2*sqrt(2),-2.0], [2.0,-2.0,-2.0], [2*sqrt(2),0,-2.0], [2.0,2.0,-2.0], [0.0,2*sqrt(2),-2.0], [-2*sqrt(2),0.0,-2.0]
+        ]
+    }
+
     
-        B_inv = np.linalg.inv(B)
-        # 计算转换矩阵：B⁻¹ * A
-        transformation_matrix = B_inv @ A
-        # 应用转换矩阵到原坐标
-        v_b = transformation_matrix @ v_a
-        return v_b
-    R_A = np.array([[1, 0, 0],
-                    [0, 1, 0],
-                    [0, 0, 1]])  # 单位矩阵，世界坐标
+    json_dir = '/home/lkh/siga/dataset/deepcad/data/cad_json'
+    shape_path = os.path.join(json_dir, shape_name[:4], shape_name+'.json')
+    
+    pkl_dir = '/home/lkh/siga/CADIMG/dataset/create_dataset/render_normal'
+    center_path = os.path.join(pkl_dir, 'centers_correct.pkl')
+    view_path = os.path.join(pkl_dir, 'views_correct.pkl')
 
-    R_B = np.array([[0, -1, 0],
-                    [1, 0, 0],
-                    [0, 0, 1]])  # 绕 Z 轴逆时针旋转 90 度
-    p_A = np.array([2, 0, 0])
-    p_world = R_A @ p_A
-    p_B =  R_B.T @  p_world
-    print("点在 B 坐标系下的坐标:", p_B)
-    print(coordinate_transform(R_A, R_B, p_A))
+    seeat = get_pkl(center_path, shape_name)
+    view = get_pkl(view_path, shape_name)
+    campos = VIEW_CORNERS_6[view][view_num]
 
-    a = (sqrt(6)-sqrt(2))/4
-    b=1
-    print()
+    seq = Brep_utils.get_seq_from_json(shape_path)
+    seq1 = copy.deepcopy(seq)
+    shape = Brep_utils.get_BRep_from_seq(seq1.seq[-1:])
+    wires = Brep_utils.get_wireframe(shape)
+    output_path = os.path.join('/home/lkh/siga/output/test/sketch/', shape_name+'_sketch.png')
+    show_single.save_BRep_wire_img_temp(wires, campos=campos, seeat=seeat, output_path=output_path)
 
 
 
 def main():
-    test_mesh()
+    view_num = 2
+    shape_name = '00004935'
+    test_sketch_render(shape_name, view_num)
 
 
 if __name__ == "__main__":
     main()
 
-
-# img_path = "/home/lkh/siga/CADIMG/infer"
-# imgs = []
-# for i in range(0,4):
-#     img_p = os.path.join(img_path, f"{i:06d}.png")
-#     imgs.append(np.array(Image.open(img_p)))
-# images_np = [np.array(img) for img in imgs]
-# result_np = np.concatenate(images_np, axis=1)  # axis=1 表示水平
-
-# # 转回 PIL.Image 并保存
-# result = Image.fromarray(result_np)
-# result.save(os.path.join(img_path, "02.png"))
-
-# img = Image.open(img_path).convert("L")
-# img0 = np.array(img)
-# print(img0.shape)
-# transform = transforms.Compose([
-#     transforms.ToTensor()
-# ])
-# img = transform(img)
-# print(img.shape)
-# img = transforms.ToPILImage()(img)
-# img1 = np.array(img)
-# print(img1.shape)
-# transform = transforms.Compose([
-#                 transforms.Resize((128,128)),
-#                 transforms.ToTensor()
-#             ])
-
-# mask = transform(mask)
-# print(mask[0,:,64])
