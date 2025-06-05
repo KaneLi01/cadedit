@@ -69,7 +69,7 @@ def create_CAD_by_seq(sub_seq):
 
 def create_CAD_by_seq_get_face(sub_seq):
     """create a 3D CAD model from CADSequence. Only support extrude with boolean operation."""
-    body = create_by_extrude_get_face(sub_seq[0])
+    body, flags = create_by_extrude_get_face(sub_seq[0])
 
 
 def create_by_extrude_get_face(extrude_op: Extrude):
@@ -81,7 +81,7 @@ def create_by_extrude_get_face(extrude_op: Extrude):
     sketch_plane = copy(extrude_op.sketch_plane)
     sketch_plane.origin = extrude_op.sketch_pos
 
-    face = create_profile_face(profile, sketch_plane)
+    face, flags = create_profile_face(profile, sketch_plane)
     normal = gp_Dir(*extrude_op.sketch_plane.normal)
     ext_vec = gp_Vec(normal).Multiplied(extrude_op.extent_one)
     body = BRepPrimAPI_MakePrism(face, ext_vec).Shape()
@@ -92,7 +92,7 @@ def create_by_extrude_get_face(extrude_op: Extrude):
         ext_vec = gp_Vec(normal.Reversed()).Multiplied(extrude_op.extent_two)
         body_two = BRepPrimAPI_MakePrism(face, ext_vec).Shape()
         body = BRepAlgoAPI_Fuse(body, body_two).Shape()
-    return body
+    return body, flags
 
 
 def create_by_extrude(extrude_op: Extrude):
@@ -104,7 +104,7 @@ def create_by_extrude(extrude_op: Extrude):
     sketch_plane = copy(extrude_op.sketch_plane)
     sketch_plane.origin = extrude_op.sketch_pos
 
-    face = create_profile_face(profile, sketch_plane)
+    face, flags = create_profile_face(profile, sketch_plane)
     normal = gp_Dir(*extrude_op.sketch_plane.normal)
     ext_vec = gp_Vec(normal).Multiplied(extrude_op.extent_one)
     body = BRepPrimAPI_MakePrism(face, ext_vec).Shape()
@@ -118,6 +118,7 @@ def create_by_extrude(extrude_op: Extrude):
     return body
 
 
+
 def create_profile_face(profile: Profile, sketch_plane: CoordSystem):
 
     """create a face from a sketch profile and the sketch plane"""
@@ -125,28 +126,17 @@ def create_profile_face(profile: Profile, sketch_plane: CoordSystem):
     normal = gp_Dir(*sketch_plane.normal)
     x_axis = gp_Dir(*sketch_plane.x_axis)
     gp_face = gp_Pln(gp_Ax3(origin, normal, x_axis))
-
-    all_loops = [create_loop_3d(loop, sketch_plane) for loop in profile.children]
+    all_loops = []
+    flags = []
+    for loop in profile.children:
+        l, flag = create_loop_3d(loop, sketch_plane)
+        all_loops.append(l)
+        flags.append(flag)
 
     topo_face = BRepBuilderAPI_MakeFace(gp_face, all_loops[0])
     for loop in all_loops[1:]:
         topo_face.Add(loop.Reversed())
-    return topo_face.Face()
-
-
-def create_profile_face_get_circle(profile: Profile, sketch_plane: CoordSystem):
-
-    """create a face from a sketch profile and the sketch plane"""
-    origin = gp_Pnt(*sketch_plane.origin)
-    normal = gp_Dir(*sketch_plane.normal)
-    x_axis = gp_Dir(*sketch_plane.x_axis)
-    gp_face = gp_Pln(gp_Ax3(origin, normal, x_axis))
-
-    all_loops = [create_loop_3d(loop, sketch_plane) for loop in profile.children]
-    topo_face = BRepBuilderAPI_MakeFace(gp_face, all_loops[0])
-    for loop in all_loops[1:]:
-        topo_face.Add(loop.Reversed())
-    return topo_face.Face()
+    return topo_face.Face(), flags
 
 
 def create_loop_3d(loop: Loop, sketch_plane: CoordSystem):
@@ -154,11 +144,11 @@ def create_loop_3d(loop: Loop, sketch_plane: CoordSystem):
     """create a 3D sketch loop"""
     topo_wire = BRepBuilderAPI_MakeWire()
     for curve in loop.children:
-        topo_edge = create_edge_3d(curve, sketch_plane)
+        topo_edge, flag = create_edge_3d(curve, sketch_plane)
         if topo_edge == -1: # omitted
             continue
         topo_wire.Add(topo_edge)
-    return topo_wire.Wire()
+    return topo_wire.Wire(), flag
 
 
 def create_edge_3d(curve: CurveBase, sketch_plane: CoordSystem):
@@ -169,11 +159,13 @@ def create_edge_3d(curve: CurveBase, sketch_plane: CoordSystem):
         start_point = point_local2global(curve.start_point, sketch_plane)
         end_point = point_local2global(curve.end_point, sketch_plane)
         topo_edge = BRepBuilderAPI_MakeEdge(start_point, end_point)
+        flag = 0
     elif isinstance(curve, Circle):
         center = point_local2global(curve.center, sketch_plane)
         axis = gp_Dir(*sketch_plane.normal)
         gp_circle = gp_Circ(gp_Ax2(center, axis), abs(float(curve.radius)))
         topo_edge = BRepBuilderAPI_MakeEdge(gp_circle)
+        flag = 1
     elif isinstance(curve, Arc):
         # print(curve.start_point, curve.mid_point, curve.end_point)
         start_point = point_local2global(curve.start_point, sketch_plane)
@@ -181,9 +173,10 @@ def create_edge_3d(curve: CurveBase, sketch_plane: CoordSystem):
         end_point = point_local2global(curve.end_point, sketch_plane)
         arc = GC_MakeArcOfCircle(start_point, mid_point, end_point).Value()
         topo_edge = BRepBuilderAPI_MakeEdge(arc)
+        flag = 0
     else:
         raise NotImplementedError(type(curve))
-    return topo_edge.Edge()
+    return topo_edge.Edge(), flag
 
 
 def point_local2global(point, sketch_plane: CoordSystem, to_gp_Pnt=True):

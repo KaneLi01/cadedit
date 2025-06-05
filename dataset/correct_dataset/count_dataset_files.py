@@ -4,11 +4,12 @@ import json
 # 统计某个数据集路径下的train/test/val，并将文件名记录在对应路径下
 
 # 需要统计的数据集路径
-root_dir = "/home/lkh/siga/dataset/my_dataset/normals_train_dataset/train_dataset"  
+root_dir = "/home/lkh/siga/dataset/my_dataset/normals_train_dataset/"  
 json_path = "/home/lkh/siga/CADIMG/dataset/correct_dataset/vaild_train_dataset_names.json"  # 写入的字典路径
 
 # 子目录
 splits = ['train', 'test', 'val']
+# splits = ['normal_img_addbody_6views_temp']
 
 result = {'explaination': 'init dataset', 'file_names': []}
 

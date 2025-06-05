@@ -122,13 +122,11 @@ def save_BRep_wire_img_temp(wire_list, campos=[2,2,2], seeat=[0,0,0],output_path
     # 设置渲染模式为阴影模式，显示面信息
     offscreen_renderer.SetModeShaded()
     offscreen_renderer.SetSize(512, 512)
-    offscreen_renderer.View.SetScale(400)
-    offscreen_renderer.SetPerspectiveProjection()
 
     # 设置摄像机
     offscreen_renderer.View.SetEye(campos[0], campos[1], campos[2])  # 设置摄像机位置
     offscreen_renderer.View.SetAt(seeat[0], seeat[1], seeat[2]) 
-    offscreen_renderer.View.SetOrthographicProjection()
+    offscreen_renderer.SetPerspectiveProjection()
 
     # 设置背景颜色
     bg_color = get_random_color(1.0, 1.0)

@@ -1,21 +1,41 @@
 import json
-import os
+import sys, os, copy, json
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import random
 import time
 import numpy as np
 from PIL import Image  # 假设使用Pillow库处理图像
 import matplotlib.pyplot as plt  # 可选，用于图像渲染
-from cadlib.Brep_utils import get_BRep_from_file, get_wireframe
-from cadlib.math_utils import weighted_random_sample
-from vis.show_single import save_BRep_img, save_BRep_wire_img, show_BRep
-from vis.vis_utils import clip_mask
+from utils.cadlib.Brep_utils import get_BRep_from_file, get_wireframe
+from utils.cadlib.math_utils import weighted_random_sample
+from utils.vis.show_single import save_BRep_img, save_BRep_wire_img, show_BRep
+from utils.vis.vis_utils import clip_mask
+from utils.cadlib import Brep_utils_test
+from utils.vis import show_single
 
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse
 from OCC.Core.gp import gp_Pnt
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 
 
+class CorrectDataFromJSON():
+    def __init__(self, cad_json_path):
+        self.cad_json_path = cad_json_path
+        self.cad_name = self.cad_json_path.split('/')[-1].split('.')[0]
+        self.cad_seq = Brep_utils_test.get_seq_from_json(self.cad_json_path)
+        self.cad_body_len = len(self.cad_seq.seq)
+        if self.cad_body_len > 1:
+            self.sub_seqs = [self.cad_seq.seq, copy.deepcopy(self.cad_seq.seq[:-1]), copy.deepcopy(self.cad_seq.seq[-1:])]
+            self.shapes = [Brep_utils_test.get_BRep_from_seq(sub_seq) for sub_seq in self.sub_seqs]
+        else: 
+            self.sub_seq = self.cad_seq.seq
+            self.shape = Brep_utils_test.get_BRep_from_seq(self.sub_seq)
+            
+    def save_sketch(self):
+        shape = self.shapes[-1]
+        show_single.save_BRep_wire_img_display_temp
 
+        pass
 
 
 class ImageProcessor:
@@ -198,32 +218,18 @@ class ARGS:
         self.edit_tpye = 'add' 
         
 
+def test():
+    # 薄片：00020002 长方体 ； 00020013 环
+    name = ['00020002', '00020013', '00020458']
+    b = []
+    test_json_dir = '/home/lkh/siga/dataset/deepcad/data/cad_json/0002'
+    for n in name:
+        test_json_path = os.path.join(test_json_dir, n+'.json')
+        a = CorrectDataFromJSON(test_json_path)
+
+    # show_BRep(a.shape, save_path=save_path)
+
 
 if __name__ == "__main__":
     args = ARGS()
-#{'009923.png', '008733.png', '006746.png'}
-    # os.mkdir(args.output_dir)
-
-    for i in range(0,6001):
-        shape_name = f"{i:06d}.png"
-        processor = ImageProcessor(args.file_path, 
-                                    args.output_dir, 
-                                    edit_type=args.edit_tpye, 
-                                    edit_path=args.edit_path, 
-                                    shape_name=shape_name
-                                    )
-        processor.save_images()
-
-    # shape_name = f"test.png"
-    # processor = ImageProcessor(args.file_path, 
-    #                             args.output_dir, 
-    #                             edit_type=args.edit_tpye, 
-    #                             edit_path=args.edit_path, 
-    #                             shape_name=shape_name
-    #                             )
-    # processor.save_images()
-
-    # check_loss()
-    # process_image_mask()
-
-
+    test()
