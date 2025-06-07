@@ -19,28 +19,52 @@ def check_slice(dx, dy, dz, scale):
             return True
     return False
 
-class FilterDataFromJSON():
+class Shape_Info_From_Json():
     def __init__(self, cad_json_path):
         self.cad_json_path = cad_json_path
         self.cad_name = self.cad_json_path.split('/')[-1].split('.')[0]
-        self.cad_seq = Brep_utils_t.get_seq_from_json(self.cad_json_path)
+        self.cad_seq = Brep_utils.get_seq_from_json(self.cad_json_path)
         self.cad_body_len = len(self.cad_seq.seq)
         if self.cad_body_len > 1:
-            self.sub_seqs = [self.cad_seq.seq, copy.deepcopy(self.cad_seq.seq[:-1]), copy.deepcopy(self.cad_seq.seq[-1:])]            
+            self.sub_seqs = [copy.deepcopy(self.cad_seq.seq), copy.deepcopy(self.cad_seq.seq[:-1]), copy.deepcopy(self.cad_seq.seq[-1:])]            
         else: 
-            raise Exception(f'{self.cad_name} has only one body')
-        self.last_seq = self.sub_seqs[-1][0]
-        self.profile = copy.deepcopy(self.last_seq.profile)
-        self.loop = self.profile.children[0]
-        self.curve = self.loop.children[0]
-        
-        # raise Exception('-')
-        self.shape = Brep_utils_t.get_BRep_from_seq(self.sub_seqs[-1])
-        self.normal = gp_Dir(*self.last_seq.sketch_plane.normal)
-        
-        self.ws = Brep_utils_t.get_wireframe_cir(self.shape)
+            self.sub_seqs = [self.cad_seq.seq]
 
+        # 要注意这里可能会影响子类的shapes
+        # self.last_seq = self.sub_seqs[-1][0]
+        # self.profile = copy.deepcopy(self.last_seq.profile)
+        # self.loop = self.profile.children[0]
+        # self.curve = self.loop.children[0]
         
+        # # raise Exception('-')
+        # self.shape = Brep_utils_t.get_BRep_from_seq(self.sub_seqs[-1])
+        # self.normal = gp_Dir(*self.last_seq.sketch_plane.normal)
+        
+        # self.ws = Brep_utils_t.get_wireframe_cir(self.shape)
+
+
+class Filter_Name_From_Seq(Shape_Info_From_Json):
+    def __init__(self, cad_json_path):
+        super().__init__(cad_json_path)
+
+    def filter_2body(self):
+        if self.cad_body_len == 2:
+            return self.cad_name
+        else: return None
+
+    def filter_union(self):
+        if self.last_seq.operation == 0 or self.last_seq.operation == 1:
+            return self.cad_name
+        else: return None
+
+
+class Filter_Name_From_Shape(Shape_Info_From_Json):
+    def __init__(self, cad_json_path):
+        super().__init__(cad_json_path)
+        self.shapes = [Brep_utils.get_BRep_from_seq(copy.copy(sub_seq)) for sub_seq in self.sub_seqs]
+        show_single.show_BRep(self.shapes[0])
+        show_single.show_BRep(self.shapes[1])
+        show_single.show_BRep(self.shapes[2])
         
 
 
@@ -52,7 +76,7 @@ class CorrectDataFromJSON():
         self.cad_seq = Brep_utils.get_seq_from_json(self.cad_json_path)
         self.cad_body_len = len(self.cad_seq.seq)
         if self.cad_body_len > 1:
-            self.sub_seqs = [self.cad_seq.seq, copy.deepcopy(self.cad_seq.seq[:-1]), copy.deepcopy(self.cad_seq.seq[-1:])]
+            self.sub_seqs = [copy.deepcopy(self.cad_seq.seq), copy.deepcopy(self.cad_seq.seq[:-1]), copy.deepcopy(self.cad_seq.seq[-1:])]
             self.shapes = [Brep_utils.get_BRep_from_seq(sub_seq) for sub_seq in self.sub_seqs]
         else: 
             self.sub_seq = self.cad_seq.seq
@@ -126,16 +150,7 @@ def filter_data():
         json.dump(result, f, indent=4)  # 加 indent 让结果更可读
 
 
-def test():
-    # 薄片：00020002 长方体 ； 00020013 环
-    name = ['00020002', '00020013']
-    b = []
-    test_json_dir = '/home/lkh/siga/dataset/deepcad/data/cad_json/0002'
-    for n in name:
-        test_json_path = os.path.join(test_json_dir, n+'.json')
-        a = CorrectDataFromJSON(test_json_path)
 
-    # show_BRep(a.shape, save_path=save_path)
 
 
 def make_sketch0():
@@ -179,7 +194,7 @@ def filter_cir():
 
         path_dir = name[:4]   
         shape_path = os.path.join(json_dir, path_dir, name+'.json')
-        shape = FilterDataFromJSON(shape_path)
+        shape = Filter_Name_From_Seq(shape_path)
 
         if isinstance(shape.curve, Circle):
             with open('temp_cir.txt', 'a') as file:
@@ -248,9 +263,22 @@ def make_sketch_circle1():
         
 
 
+def test():
+    # 薄片：00020002 长方体 ； 00020013 环; 00020244 复杂的形状；00020328两个圆柱； 00020845 有交集的形状
+    # name = ['00020002', '00020013', '00020244', '00020328', '00020845', '00021807']
+    name = ['00020328']
+    b = []
+    test_json_dir = '/home/lkh/siga/dataset/deepcad/data/cad_json/0002'
+    for n in name:
+        test_json_path = os.path.join(test_json_dir, n+'.json')
+        a = Filter_Name_From_Shape(test_json_path)
+
+
+
+
 
 def main():
-    make_sketch_circle1()
+    test()
 
 
 if __name__ == "__main__":

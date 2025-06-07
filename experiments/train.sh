@@ -8,9 +8,9 @@ DATA_DIR="/home/lkh/siga/dataset/my_dataset/normals_train_dataset/train_dataset_
 
 python /home/lkh/siga/CADIMG/experiments/scripts/train_cn.py\
         --file_path $DATA_DIR\
-        --tip test_contronlnet\
+        --tip lr_to_1e-5\
         --torch_dtype float32\
         --batch_size 10\
         --res 256\
         --num_epochs 20 \
-        --lr 2e-5 
+        --lr 1e-5 

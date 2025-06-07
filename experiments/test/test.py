@@ -4,7 +4,7 @@ from torch.utils.tensorboard import SummaryWriter
 import datetime
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from utils import log_util
+from CADIMG.utils import log_utils
 from utils.vis import show_single
 import utils.cadlib.Brep_utils as Brep_utils
 from torchvision import transforms

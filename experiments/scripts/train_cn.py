@@ -1,5 +1,7 @@
 import sys, datetime, os, random
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from CADIMG.utils import img_utils
+
 
 from tqdm import tqdm
 from PIL import Image
@@ -13,7 +15,7 @@ from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionModelWit
 from diffusers import StableDiffusionPipeline, ControlNetModel, StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline
 
 from config.train_config import AppConfig
-from utils import log_util, img_util
+from CADIMG.utils import log_utils
 from dataset.dataloaders.cad_sketch_dataset import NormalSketchControlNetDataset
 from models.diffusion import Diffusion_Models
 
@@ -34,7 +36,7 @@ def preprocess_image(image_path, device, res):
 def main():
     args = AppConfig.from_cli()
     if not args.debug:
-        log_dir, log_file, tsboard_writer, compare_log = log_util.setup_logdir(args.parent_log_dir, args.compare_log)  # 结果路径、tensorboard、日志文件
+        log_dir, log_file, tsboard_writer, compare_log = log_utils.setup_logdir(args.parent_log_dir, args.compare_log)  # 结果路径、tensorboard、日志文件
         AppConfig.write_config(config_obj=args, log_file=log_file, compare_log=compare_log)
 
     train_dataset = NormalSketchControlNetDataset(
@@ -152,9 +154,10 @@ def main():
                         ).images[0]
                     output_list.append(output)
 
-                img_util.merge_and_save_images(output_list, os.path.join(log_dir, "vis", f"{epoch}_{step}.png"))
-                tsboard_writer.add_scalar('noise_loss', noise_loss.item(), step)
-                log_util.log_string(f"Epoch {epoch}, Step {step}, noise_loss: {noise_loss.item():.4f}", log_file)
+                img_utils.merge_and_save_images(output_list, os.path.join(log_dir, "vis", f"{epoch}_{step}.png"))
+                global_step = epoch * len(train_dataloader) + step
+                tsboard_writer.add_scalar('noise_loss', noise_loss.item(), global_step)
+                log_utils.log_string(f"Epoch {epoch}, Step {step}, noise_loss: {noise_loss.item():.4f}", log_file)
         torch.save(train_pipe.controlnet.state_dict(), os.path.join(log_dir, "ckpt", f"controlnet_epoch{epoch}.pth"))
     torch.save(train_pipe.controlnet.state_dict(), os.path.join(log_dir, "ckpt", f"controlnet.pth"))
 
@@ -202,10 +205,10 @@ if __name__ == "__main__":
         if args.lam:
             tsboard_writer.add_scalar('noise_loss', noise_loss.item(), step)
             tsboard_writer.add_scalar('re_loss', re_loss.item(), step)
-            log_util.log_string(f"Epoch {epoch}, Step {step}, noise_loss: {noise_loss.item():.4f}, re_loss: {re_loss.item():.4f}", log_file)
+            log_utils.log_string(f"Epoch {epoch}, Step {step}, noise_loss: {noise_loss.item():.4f}, re_loss: {re_loss.item():.4f}", log_file)
         else:
             tsboard_writer.add_scalar('noise_loss', noise_loss.item(), step)
-            log_util.log_string(f"Epoch {epoch}, Step {step}, noise_loss: {noise_loss.item():.4f}", log_file)
+            log_utils.log_string(f"Epoch {epoch}, Step {step}, noise_loss: {noise_loss.item():.4f}", log_file)
 
         torch.save(train_pipe.controlnet.state_dict(), os.path.join(log_dir, "ckpt", f"controlnet_epoch{epoch}.pth"))
 

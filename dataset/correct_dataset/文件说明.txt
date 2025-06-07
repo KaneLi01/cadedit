@@ -2,3 +2,10 @@ vaild_train_dataset_names.json
 记录有效shape名称，由若干字典组成，每个字典的 键'file_names' 代表根据 键'explaination' 筛选出的shape
 - init dataset：初步筛选出的9187个文件
 - complex：筛选复杂的面数
+
+
+数据集制作的流程：
+1. 筛选需要的shape，将这些shape的文件名记录在pkl文件中。每次筛选都用一个字典来记录筛选的类别和结果。最终保存为一个字典列表。
+    筛选的类型有：1.body只有两个 2.body合并类型为并集 3.body没有交集 4.两个body之间的最小距离为0 5.薄片、棍状形状删去 6.面数过多的形状删去
+    然后再额外筛选特殊形状进行特殊处理： 1.添加的body的profile为圆柱的，筛选出来。然后只绘制其底面，和blender渲染出来的sketch进行合并以得到圆柱的正确wireframe图
+2. 用blender渲染筛选后的形状，得到base sketch target的初步内容。每个形状都有若干视角，表示为不同形状文件夹下的多个不同视图图片。
