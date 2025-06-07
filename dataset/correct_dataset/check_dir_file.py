@@ -64,9 +64,9 @@ def chech_files_num(dir, n=6):
 
 if __name__ == "__main__":
     
-    dir1 = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_img_addbody_6views/base'
-    dir2 = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_img_addbody_6views/result'
+    dir1 = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/train_dataset_6views/val/base_img'
+    dir2 = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/train_dataset_6views/val/sketch_img'
 
-    chech_files_num(dir1)
+    compare_directories(dir1, dir2)
     
     

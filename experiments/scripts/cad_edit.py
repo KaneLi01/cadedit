@@ -30,7 +30,7 @@ def load_inference_models(args):
     
     # 加载训练好的ControlNet
     controlnet = ControlNetModel.from_pretrained(args.controlnet_path)
-    trained_cn_path = os.path.join(args.parent_cn_path, args.index, "ckpt/controlnet.pth")  # 如果不是则需要修改
+    trained_cn_path = os.path.join(args.parent_cn_path, args.index, "ckpt/controlnet_epoch3.pth")  # 如果不是则需要修改
     controlnet.load_state_dict(torch.load(trained_cn_path))
     
     # 加载投影器
@@ -66,10 +66,10 @@ def load_inference_models(args):
     return clip_model, clip_processor, inference_pipe, projector1, projector2
 
 # 图像预处理
-def preprocess_image(image_path, device):
+def preprocess_image(image_path, device, res):
     image = Image.open(image_path).convert("RGB")
     transform = transforms.Compose([
-        transforms.Resize((128, 128)),
+        transforms.Resize((res, res)),
         transforms.ToTensor(),
     ])
     return transform(image).unsqueeze(0).to(device)
@@ -79,8 +79,8 @@ def infer(args, input_image_path, sketch_image_path, output_path, models, num_in
     clip_model, clip_processor, inference_pipe, projector1, projector2 = load_inference_models(args)
     
     # 预处理输入图像
-    input_image = preprocess_image(input_image_path, args.device)
-    sketch_image = transforms.Normalize([0.5], [0.5])(preprocess_image(sketch_image_path, args.device))
+    input_image = preprocess_image(input_image_path, args.device, args.res)
+    sketch_image = transforms.Normalize([0.5], [0.5])(preprocess_image(sketch_image_path, args.device, args.res))
     # 生成图像嵌入
     with torch.no_grad():
         # 处理输入图像
@@ -129,6 +129,6 @@ if __name__ == "__main__":
     sketch_image_path = args.test_sketch_path
     input_name = input_image_path.split('/')[-1].split('.')[0]
     sketch_name = sketch_image_path.split('/')[-1].split('.')[0]
-    output_path = f'/home/lkh/siga/output/infer/{args.index}_{input_name}{sketch_name}.png'  # 输出图像路径
+    output_path = f'/home/lkh/siga/output/infer/6views/{args.index}_{input_name}{sketch_name}.png'  # 输出图像路径
     result = infer(args, input_image_path, sketch_image_path, output_path, models)
     print(f"Inference completed. Result saved to {output_path}")

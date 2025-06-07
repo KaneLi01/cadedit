@@ -1,4 +1,4 @@
-import sys, datetime, os
+import sys, datetime, os, random
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from tqdm import tqdm
@@ -13,7 +13,7 @@ from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionModelWit
 from diffusers import StableDiffusionPipeline, ControlNetModel, StableDiffusionControlNetPipeline, StableDiffusionControlNetImg2ImgPipeline
 
 from config.train_config import AppConfig
-from utils import log_util
+from utils import log_util, img_util
 from dataset.dataloaders.cad_sketch_dataset import NormalSketchControlNetDataset
 from models.diffusion import Diffusion_Models
 
@@ -22,10 +22,10 @@ torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 
 
-def preprocess_image(image_path, device):
+def preprocess_image(image_path, device, res):
     image = Image.open(image_path).convert("RGB")
     transform = transforms.Compose([
-        transforms.Resize((128, 128)),
+        transforms.Resize((res, res)),
         transforms.ToTensor(),
     ])
     return transform(image).unsqueeze(0).to(device)
@@ -125,27 +125,34 @@ def main():
 
             if step % 50 == 0:
 
-                test_img_path = '/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_light/test/base_img/007200.png'
-                test_sketch_path = '/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_light/test/sketch_img/007200.png'
-                test_image = preprocess_image(test_img_path, args.device)
-                test_sketch_image = transforms.Normalize([0.5], [0.5])(preprocess_image(test_sketch_path, args.device))
-                with torch.no_grad():
-                    # 处理输入图像
-                    test_clip_input = models.clip_processor(images=test_image, return_tensors="pt").pixel_values.to(args.device)
-                    test_image_embeds = models.clip_model(test_clip_input).last_hidden_state
-                    prompt_embeds = torch.cat([test_image_embeds, test_image_embeds], dim=0)
-                    pooled_prompt_embeds = test_image_embeds.mean(dim=1)
-                    output = train_pipe(
-                        prompt_embeds=prompt_embeds,
-                        pooled_prompt_embeds=pooled_prompt_embeds,
-                        negative_prompt_embeds=torch.zeros_like(prompt_embeds),
-                        negative_pooled_prompt_embeds=torch.zeros_like(pooled_prompt_embeds),
-                        image=test_sketch_image,
-                        num_inference_steps=20,
-                        guidance_scale=7.5,
-                    ).images[0]
+                test_img_dir = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/train_dataset_6views/val/base_img'
+                test_sketch_dir = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/train_dataset_6views/val/sketch_img'
+                all_files = [f for f in os.listdir(test_img_dir) if os.path.isfile(os.path.join(test_img_dir, f))]
+                selected_files = random.sample(all_files, 4)
+                output_list = []
+                for fname in selected_files:
+                    img_path = os.path.join(test_img_dir, fname)
+                    sketch_path = os.path.join(test_sketch_dir, fname)
+                    test_image = preprocess_image(img_path, args.device, args.res)
+                    test_sketch_image = transforms.Normalize([0.5], [0.5])(preprocess_image(sketch_path, args.device, args.res))
+                    with torch.no_grad():
+                        # 处理输入图像
+                        test_clip_input = models.clip_processor(images=test_image, return_tensors="pt").pixel_values.to(args.device)
+                        test_image_embeds = models.clip_model(test_clip_input).last_hidden_state
+                        prompt_embeds = torch.cat([test_image_embeds, test_image_embeds], dim=0)
+                        pooled_prompt_embeds = test_image_embeds.mean(dim=1)
+                        output = train_pipe(
+                            prompt_embeds=prompt_embeds,
+                            pooled_prompt_embeds=pooled_prompt_embeds,
+                            negative_prompt_embeds=torch.zeros_like(prompt_embeds),
+                            negative_pooled_prompt_embeds=torch.zeros_like(pooled_prompt_embeds),
+                            image=test_sketch_image,
+                            num_inference_steps=20,
+                            guidance_scale=7.5,
+                        ).images[0]
+                    output_list.append(output)
 
-                    output.save(os.path.join(log_dir, "vis", f"{epoch}_{step}.png"))
+                img_util.merge_and_save_images(output_list, os.path.join(log_dir, "vis", f"{epoch}_{step}.png"))
                 tsboard_writer.add_scalar('noise_loss', noise_loss.item(), step)
                 log_util.log_string(f"Epoch {epoch}, Step {step}, noise_loss: {noise_loss.item():.4f}", log_file)
         torch.save(train_pipe.controlnet.state_dict(), os.path.join(log_dir, "ckpt", f"controlnet_epoch{epoch}.pth"))

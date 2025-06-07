@@ -18,6 +18,7 @@ DEFAULT_CONFIG = {
     "test_img_path": "",
     "test_sketch_path": "",
     "img_index": [0,4],
+    "res": 256,
     
     # 输出路径
     "output_dir": "/home/lkh/siga/CADIMG/infer",
@@ -47,6 +48,7 @@ class AppConfig:
     test_img_path: str
     test_sketch_path: str
     img_index: list
+    res: int
 
     """输出路径"""
     output_dir: str
@@ -90,6 +92,8 @@ class AppConfig:
                           default=defaults.test_sketch_path)
         parser.add_argument("--img_index", type=int, nargs='+', 
                           default=defaults.img_index)
+        parser.add_argument("--res", 
+                          default=defaults.res)
         
         parser.add_argument("--output_dir", 
                           default=defaults.output_dir)
@@ -115,6 +119,7 @@ class AppConfig:
             test_img_path=args.test_img_path,
             test_sketch_path=args.test_sketch_path,
             img_index=args.img_index,
+            res=args.res
 
             output_dir=args.output_dir,
 

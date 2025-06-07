@@ -2,9 +2,9 @@
 
 # 该脚本用于将某个目录下的文件划分为train/test/val，并移动到对应类型的目录
 
-DIR_ORI="/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet01/stroke_img"  # 待处理的路径
-DIR_TARGET="/home/lkh/siga/dataset/my_dataset/normals_train_dataset/train_dataset_6views"  # tarin/test/val的父目录
-IMG_TYPE="sketch_img"  # 数据类型
+DIR_ORI="/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_img_addbody_6views/base_img"  # 待处理的路径
+DIR_TARGET="/home/lkh/siga/dataset/my_dataset/normals_train_dataset/train_dataset_6views/"  # tarin/test/val的父目录
+IMG_TYPE="base_img"  # 数据类型
 
 DIR_TRAIN=$DIR_TARGET"train/"$IMG_TYPE
 DIR_TEST=$DIR_TARGET"test/"$IMG_TYPE
