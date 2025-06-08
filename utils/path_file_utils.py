@@ -2,7 +2,7 @@
     路径、文件的操作，如复制移动读写；
 """
 
-import json, os
+import json, os, inspect
 from pathlib import Path
 import shutil
 from typing import Callable
@@ -103,34 +103,103 @@ def check_subidrs_num(dir, n=6, mode='check'):
                 else: raise Exception('wrong mode')
 
 
-def process_files(input_root, output_root, file_handler, *, suffix_filter=None):
-    """
-    遍历 input_root 下的所有文件，并将每个文件的 input_path 与对应的 output_path 
-    传入 file_handler。
+# def process_files(input_root, output_root, file_handler, *, suffix_filter=None):
+#     """
+#     遍历 input_root 下的所有文件，并将每个文件的 input_path 与对应的 output_path 
+#     传入 file_handler。
 
-    参数:
-        input_root (str): 输入路径的根目录
-        output_root (str): 输出路径的根目录
-        file_handler (Callable[[str, str], None]): 接收 input_file_path 和 output_file_path 的处理函数
-        suffix_filter: 文件后缀
-    """
+#     参数:
+#         input_root (str): 输入路径的根目录
+#         output_root (str): 输出路径的根目录
+#         file_handler (Callable[[str, str], None]): 接收 input_file_path 和 output_file_path 的处理函数
+#         suffix_filter: 文件后缀
+#     """
     
-    os.makedirs(output_root, exist_ok=True)
+#     os.makedirs(output_root, exist_ok=True)
 
-    for dirpath, _, filenames in os.walk(input_root):
-        for filename in filenames:
-            input_path = os.path.join(dirpath, filename)
+#     for dirpath, _, filenames in os.walk(input_root):
+#         for filename in filenames:
+#             input_path = os.path.join(dirpath, filename)
 
-            if suffix_filter and not filename.endswith(suffix_filter):
-                continue
+#             if suffix_filter and not filename.endswith(suffix_filter):
+#                 continue
 
-            rel_path = os.path.relpath(input_path, input_root)
-            output_path = os.path.join(output_root, rel_path)
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+#             rel_path = os.path.relpath(input_path, input_root)
+#             output_path = os.path.join(output_root, rel_path)
+#             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-            file_handler(input_path, output_path)
+#             file_handler(input_path, output_path)
 
 
+# def process_files_w_2input(input_root1, input_root2, output_root, file_handler, *, suffix_filter=None):
+#     """
+#     处理两个具有相同结构的输入根目录下的对应文件。
+    
+#     对于 input_root1 和 input_root2 下每一个相同相对路径的文件：
+#         将 (path1, path2, output_path) 传入 file_handler。
+
+#     参数:
+#         input_root1 (str): 第一个输入根目录
+#         input_root2 (str): 第二个输入根目录
+#         output_root (str): 输出根目录
+#         file_handler (Callable[[str, str, str], None]): 处理函数
+#         suffix_filter (str 或 tuple[str], optional): 文件后缀过滤器
+#     """
+#     for dirpath, _, filenames in os.walk(input_root1):
+#         for filename in filenames:
+#             path1 = os.path.join(dirpath, filename)
+#             if suffix_filter and not filename.endswith(suffix_filter):
+#                 continue
+
+#             rel_path = os.path.relpath(path1, input_root1)
+#             path2 = os.path.join(input_root2, rel_path)
+#             output_path = os.path.join(output_root, rel_path)
+
+#             if not os.path.exists(path2):
+#                 print(f"跳过：{rel_path} 在 {input_root2} 中不存在")
+#                 continue
+
+#             os.makedirs(os.path.dirname(output_path), exist_ok=True)
+#             file_handler(path1, path2, output_path)
+
+
+def process_files_auto(input_root, output_root, file_handler, op_root=None, *, suffix_filter=None):
+    """
+    自动根据 file_handler 的参数数量处理单输入或双输入。
+    """
+    num_params = len(inspect.signature(file_handler).parameters)
+
+    if num_params == 2:
+        # 单输入文件处理
+        for dirpath, _, filenames in os.walk(input_root):
+            for filename in filenames:
+                if suffix_filter and not filename.endswith(suffix_filter):
+                    continue
+                input_path = os.path.join(dirpath, filename)
+                rel_path = os.path.relpath(input_path, input_root)
+                output_path = os.path.join(output_root, rel_path)
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                file_handler(input_path, output_path)
+
+    elif num_params == 3:
+        # 双输入文件处理
+        assert op_root is not None, "第二输入路径 op_root 不能为空"
+        for dirpath, _, filenames in os.walk(input_root):
+            for filename in filenames:
+                if suffix_filter and not filename.endswith(suffix_filter):
+                    continue
+                path1 = os.path.join(dirpath, filename)
+                rel_path = os.path.relpath(path1, input_root)
+                path2 = os.path.join(op_root, rel_path)
+                output_path = os.path.join(output_root, rel_path)
+                if not os.path.exists(path2):
+                    print(f"跳过未对齐文件: {rel_path}")
+                    continue
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                file_handler(path1, path2, output_path)
+
+    else:
+        raise ValueError("file_handler 参数数量必须为2或3")
 
 
 def test():
