@@ -5,6 +5,7 @@
 import json, os
 from pathlib import Path
 import shutil
+from typing import Callable
 
 
 def load_json_file(json_path):
@@ -61,11 +62,11 @@ def compare_dirs(dir1, dir2):
     only_in_dir1 = dirs1 - dirs2
     only_in_dir2 = dirs2 - dirs1
 
-    print("\n只在第一个目录中存在的文件夹:")
+    print("\n只在第一个目录中存在的内容:")
     for path in sorted(only_in_dir1):
         print(f"- {path}")
 
-    print("\n只在第二个目录中存在的文件夹:")
+    print("\n只在第二个目录中存在的内容:")
     for path in sorted(only_in_dir2):
         print(f"- {path}")
 
@@ -102,10 +103,39 @@ def check_subidrs_num(dir, n=6, mode='check'):
                 else: raise Exception('wrong mode')
 
 
+def process_files(input_root, output_root, file_handler, *, suffix_filter=None):
+    """
+    遍历 input_root 下的所有文件，并将每个文件的 input_path 与对应的 output_path 
+    传入 file_handler。
+
+    参数:
+        input_root (str): 输入路径的根目录
+        output_root (str): 输出路径的根目录
+        file_handler (Callable[[str, str], None]): 接收 input_file_path 和 output_file_path 的处理函数
+        suffix_filter: 文件后缀
+    """
+    
+    os.makedirs(output_root, exist_ok=True)
+
+    for dirpath, _, filenames in os.walk(input_root):
+        for filename in filenames:
+            input_path = os.path.join(dirpath, filename)
+
+            if suffix_filter and not filename.endswith(suffix_filter):
+                continue
+
+            rel_path = os.path.relpath(input_path, input_root)
+            output_path = os.path.join(output_root, rel_path)
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            file_handler(input_path, output_path)
+
+
+
 
 def test():
-    dir1 = '/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_dark/test/base_img'
-    dir2 = '/home/lkh/siga/dataset/my_dataset/cad_rgb_imgs/cad_controlnet_cube_dark/test/sketch_img'
+    dir1 = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_img_addbody_6views_init/operate'
+    dir2 = '/home/lkh/siga/output/temp'
     _, _ = compare_dirs(dir1, dir2)
     pass
 

@@ -5,16 +5,16 @@ from PIL import Image
 import cv2
 import numpy as np
 
-from utils import change_bg_img, scale_crop_img, get_contour_img, stack_imgs
+from utils import change_bg_img, scale_crop_img, get_contour_img, stack_imgs, process_files
 
 
 '''将渲染的初始图片进行修正'''
-
 
 def correct_normal_bg_dataset(init_normal_img_dir, output_dir):
     """
     将blender渲染的图片背景替换为白色
     """
+    
     type_name = os.listdir(init_normal_img_dir)  # base
     type_name = ["base"]
     for t in type_name:
@@ -44,14 +44,16 @@ def get_final_sketch_img(img1, img2, output_path):
     _ = stack_imgs(img1, img2, output_path)
 
 
+def change_bg_img_fp(img_path, output_path):
+    img = Image.open(img_path)
+    change_bg_img(img, output_path)
+
 
 def main():
-    img2_path = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_img_addbody_6views_temp/sketch_img/00000126_0.png'
-    img1_path = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/sketch_temp1/00000126_0.png'
-    output_path = "/home/lkh/siga/output/temp/2.png"
-    img1 = Image.open(img1_path)
-    img2 = Image.open(img2_path)
-    get_final_sketch_img(img1, img2, output_path)
+    init_root = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_img_addbody_6views_init/operate'
+    output_root = '/home/lkh/siga/output/temp'
+    process_files(init_root, output_root, change_bg_img_fp)
+
 
 
 if __name__ == '__main__':

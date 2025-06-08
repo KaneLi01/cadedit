@@ -1,6 +1,9 @@
-import json
+import json, copy
 from .extrude import CADSequence
 from .visualize import create_CAD, create_CAD_by_seq
+
+from dataclasses import dataclass
+from collections import namedtuple
 
 from OCC.Core.TopExp import TopExp_Explorer
 from OCC.Core.TopAbs import TopAbs_VERTEX, TopAbs_EDGE, TopAbs_WIRE, TopAbs_FACE
@@ -10,11 +13,29 @@ from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeWire
 from OCC.Core.BRepTools import breptools_OuterWire
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib
+from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
+from OCC.Core.gp import gp_Pnt
+from OCC.Core.GProp import GProp_GProps
+from OCC.Core.BRepGProp import brepgprop
+from OCC.Core.BRepExtrema import BRepExtrema_DistShapeShape
+
+@dataclass
+class Point:
+    x: float
+    y: float
+    z: float
+
+@dataclass
+class BBox:
+    min: Point
+    max: Point
+    center: Point
+
 
 
 def get_BRep_from_seq(sub_seq):
     try:
-        out_shape = create_CAD_by_seq(sub_seq)
+        out_shape = create_CAD_by_seq(copy.deepcopy(sub_seq))
         return out_shape
     except Exception as e:
         print("create shape from cad_seq fail.", e)
@@ -40,24 +61,34 @@ def get_BRep_from_file(file_path):
         print("load and create failed.", e)
     
 
+def get_bbox(shape: TopoDS_Compound):
+    """获取shape的包围盒"""
+    bbox = Bnd_Box()
 
-def get_points_from_BRep(shape):
-    """
-    提取 OpenCASCADE 几何体的所有顶点坐标
-    :param shape: TopoDS_Shape
-    :return: List of (x, y, z) 坐标
-    """
-    points = set()
-    explorer = TopExp_Explorer(shape, TopAbs_VERTEX)  # 遍历顶点
+    brepbndlib.Add(shape, bbox)
+
+    xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+    min=Point(xmin, ymin, zmin)
+    max=Point(xmax, ymax, zmax)
+    center=Point((xmin + xmax) / 2, (ymin + ymax) / 2, (zmin + zmax) / 2)
+
+    return BBox(min, max, center)
+
+
+def get_wires(shape):
+    """获取shape的线框"""
+    edge_list = []  # 存储边的列表
+    explorer = TopExp_Explorer(shape, TopAbs_EDGE)  # 遍历 Compound 中的边
     while explorer.More():
-        vertex = explorer.Current()  # 获取当前顶点
-        point = BRep_Tool.Pnt(vertex)  # 获取顶点的坐标
-        points.add((point.X(), point.Y(), point.Z()))  # 转换为 (x, y, z) 格式
+        edge = explorer.Current()  # 获取当前边 
+        edge_list.append(edge)
         explorer.Next()
-    return points
+
+    return edge_list  # 返回生成的线框
 
 
-def get_faces_from_BRep(shape):
+def get_faces(shape):
+    """获取shape的面"""
     faces = set()
     explorer = TopExp_Explorer(shape, TopAbs_FACE)
     while explorer.More():
@@ -67,17 +98,24 @@ def get_faces_from_BRep(shape):
     return faces
 
 
+def get_volume(shape):
+    """计算shape的体积"""
+    if shape is None or shape.IsNull():
+        return 0.0
+
+    props = GProp_GProps()
+    brepgprop.VolumeProperties(shape, props)
+    return props.Mass()
 
 
-def get_wireframe(shape):
-    edge_list = []  # 存储边的列表
-    explorer = TopExp_Explorer(shape, TopAbs_EDGE)  # 遍历 Compound 中的边
-    while explorer.More():
-        edge = explorer.Current()  # 获取当前边 
-        edge_list.append(edge)
-        explorer.Next()
+def get_min_distance(shape1: TopoDS_Shape, shape2: TopoDS_Shape) -> float:
+    """计算两个Shape之间的最小距离"""
+    dist_calc = BRepExtrema_DistShapeShape(shape1, shape2)
+    dist_calc.Perform()
+    if not dist_calc.IsDone():
+        raise RuntimeError("距离计算失败")
+    return dist_calc.Value()
 
-    return edge_list  # 返回生成的线框
 
 def get_wireframe_cir(shape):
     from OCC.Core.Geom import Geom_Line
@@ -94,16 +132,41 @@ def get_wireframe_cir(shape):
 
         explorer.Next()
 
-    return edge_list  # 返回生成的线框
+    return edge_list 
 
 
-def get_bbox(shape: TopoDS_Compound):
-    # 获取shape的包围盒坐标
-    bbox = Bnd_Box()
-
-    brepbndlib.Add(shape, bbox)
-
-    xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+def create_box_from_minmax(min_point: Point, max_point: Point):
+    """
+    从最小点和最大点创建平行于坐标轴的topoDS长方体
+    """
+    dx = max_point.x - min_point.x
+    dy = max_point.y - min_point.y
+    dz = max_point.z - min_point.z
     
-    return (xmin, ymin, zmin, xmax, ymax, zmax)
+    # 创建长方体（从 min_point 出发，沿 XYZ 正方向延伸 dx, dy, dz）
+    box = BRepPrimAPI_MakeBox(
+        gp_Pnt(min_point.x, min_point.y, min_point.z),  # 起点（最小点）
+        dx, dy, dz           # 长、宽、高
+    ).Solid()
+    
+    return box
 
+
+def test_create_2boxs(mode='intersection'):
+    """
+    创建不同的box实例，用于测试
+    """
+    box1 = BRepPrimAPI_MakeBox(gp_Pnt(0, 0, 0), 1, 1, 1).Solid()
+
+    if mode == 'inter':
+        p2 = gp_Pnt(0.5, 0.5, 0)
+    elif mode == 'tang':
+        p2 = gp_Pnt(1, 0, 0)
+    elif mode == 'away':
+        p2 = gp_Pnt(2, 2, 0)
+    else:
+        raise ValueError(f"Unknown mode: {mode}")
+
+    box2 = BRepPrimAPI_MakeBox(p2, 1, 1, 1).Solid()
+    return box1, box2
+    

@@ -5,7 +5,7 @@ import copy, os, sys
 from math import *
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import utils.cadlib.Brep_utils as Brep_utils
-from utils.vis import show_single
+from utils.vis import render_cad
 import argparse
 
 

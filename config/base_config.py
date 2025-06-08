@@ -7,8 +7,9 @@ from utils import load_json_file
 
 
 class BaseConfig:
+    
     @classmethod
-    def get_default(cls, config_path):
+    def get_default(cls, config_path='/home/lkh/siga/CADIMG/config/train_config.json'):
         return cls(**load_json_file(config_path))
 
     @classmethod

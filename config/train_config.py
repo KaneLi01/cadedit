@@ -2,7 +2,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dataclasses import dataclass
-from base_config import BaseConfig
+from .base_config import BaseConfig
 from utils import log_string
 
 

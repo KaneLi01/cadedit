@@ -4,7 +4,6 @@ import cv2
 import numpy as np
 
 
-
 def merge_imgs(
     img_list, 
     save_path, 

@@ -6,7 +6,7 @@ import copy, os, sys
 from math import *
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import utils.cadlib.Brep_utils as Brep_utils
-from utils.vis import show_single
+from CADIMG.utils.vis import render_cad
 from shape_info import Shapeinfo, get_args
 
 
@@ -14,7 +14,7 @@ def main():
     args = get_args()
     shape = Shapeinfo(args.name, args.num)
     output_path = os.path.join('/home/lkh/siga/CADIMG/experiments/test/output/imgs/', args.name+'_sketch.png')
-    show_single.save_BRep_wire_img_temp(shape.wires, campos=shape.campos, seeat=shape.seeat, output_path=output_path)
+    render_cad.save_BRep_wire_img_temp(shape.wires, campos=shape.campos, seeat=shape.seeat, output_path=output_path)
 
 
 if __name__ == "__main__":

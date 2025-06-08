@@ -8,10 +8,10 @@ from PIL import Image  # 假设使用Pillow库处理图像
 import matplotlib.pyplot as plt  # 可选，用于图像渲染
 from utils.cadlib.Brep_utils import get_BRep_from_file, get_wireframe
 from utils.cadlib.math_utils import weighted_random_sample
-from utils.vis.show_single import save_BRep_img, save_BRep_wire_img, show_BRep
+from CADIMG.utils.vis.render_cad import save_BRep_img, save_BRep_wire_img, show_BRep
 from utils.vis.vis_utils import clip_mask
 from utils.cadlib import Brep_utils_test
-from utils.vis import show_single
+from CADIMG.utils.vis import render_cad
 
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse
 from OCC.Core.gp import gp_Pnt
@@ -33,7 +33,7 @@ class CorrectDataFromJSON():
             
     def save_sketch(self):
         shape = self.shapes[-1]
-        show_single.save_BRep_wire_img_display_temp
+        render_cad.save_BRep_wire_img_display_temp
 
         pass
 

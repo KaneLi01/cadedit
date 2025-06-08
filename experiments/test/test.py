@@ -5,7 +5,7 @@ import datetime
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from CADIMG.utils import log_utils
-from utils.vis import show_single
+from CADIMG.utils.vis import render_cad
 import utils.cadlib.Brep_utils as Brep_utils
 from torchvision import transforms
 import torch
@@ -585,7 +585,7 @@ def test_sketch_render(shape_name, view_num=0):
     shape = Brep_utils.get_BRep_from_seq(seq1.seq[-1:])
     wires = Brep_utils.get_wireframe(shape)
     output_path = os.path.join('/home/lkh/siga/output/test/sketch/', shape_name+'_sketch.png')
-    show_single.save_BRep_wire_img_temp(wires, campos=campos, seeat=seeat, output_path=output_path)
+    render_cad.save_BRep_wire_img_temp(wires, campos=campos, seeat=seeat, output_path=output_path)
 
 
 

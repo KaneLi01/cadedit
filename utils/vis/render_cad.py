@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cadlib.extrude import CADSequence
 from cadlib.visualize import vec2CADsolid, create_CAD, get_wireframe_from_body
-from cadlib.Brep_utils import get_BRep_from_file, get_points_from_BRep, get_wireframe
+from cadlib.Brep_utils import get_BRep_from_file,  get_wires
 from OCC.Core.Quantity import Quantity_Color, Quantity_TOC_RGB, Quantity_NOC_BLACK
 from OCC.Core.V3d import  V3d_DirectionalLight
 from OCC.Core.Graphic3d import  Graphic3d_MaterialAspect
@@ -63,6 +63,37 @@ def get_random_color(a1, a2):
     return color
 
 
+def display_BRep(shape=None, wire_list=None):
+    """
+    用于在线渲染形状或线框，或二者合并
+    """
+
+    if shape == None and wire_list == None:
+        raise Exception('input at least one item!')
+
+    display, start_display, _, _ = init_display()
+
+    # 设置随机浅色背景
+    r, g, b = random.uniform(0.7, 1.0), random.uniform(0.7, 1.0), random.uniform(0.7, 1.0)
+    bg_color = Quantity_Color(r, g, b, Quantity_TOC_RGB)
+    display.View.SetBgGradientColors(bg_color,bg_color)
+
+    # 设置摄像机
+    display.View.SetEye(2, 2, 2)  
+    display.View.SetAt(1, 1, 1)  
+    display.View.SetScale(500)
+
+    if wire_list is not None:
+        for wire in wire_list:
+            display.DisplayShape(wire, update=False, color="black")
+    if shape is not None:
+        ais_out_shape = display.DisplayShape(shape, update=False, color=get_mechanical_color(MECHANICAL_COLORS))
+ 
+    start_display()
+
+
+
+
 # 要把摄像机位置、shape颜色等随机信息作为参数传入，写一个新函数
 def save_BRep_img(shape, output_path=None, seed=42):
     random.seed(seed)  # 确保每个数据的初始和修改后相同
@@ -106,7 +137,7 @@ def save_BRep_img(shape, output_path=None, seed=42):
 
 
     # 绘制线框为黑色（保证离散形状的线框）
-    edge_list = get_wireframe(shape) 
+    edge_list = get_wires(shape) 
     for edge in edge_list:
         offscreen_renderer.DisplayShape(edge, update=False, color="black")
 
@@ -200,47 +231,9 @@ def save_BRep_wire_img(wire_list, output_path=None, seed=42):
     offscreen_renderer.View.Dump(output_path)
 
 
-# 用save_BRep_img保存，这个用于交互式渲染
-def show_BRep(out_shape, show_type='body', save_path=None):
-    display, start_display, _, _ = init_display()
-
-    # 设置随机浅色背景
-    r, g, b = random.uniform(0.7, 1.0), random.uniform(0.7, 1.0), random.uniform(0.7, 1.0)
-    bg_color = Quantity_Color(r, g, b, Quantity_TOC_RGB)
-    display.View.SetBgGradientColors(bg_color,bg_color)
-
-    # 设置摄像机
-    display.View.SetEye(1, 1, 1)  
-    display.View.SetAt(1, 1, 1)  
-    display.View.SetScale(500)
-
-    edge_list = get_wireframe(out_shape)  # 将形状的边提取出来，防止离散的形状
-    # 绘制边
-    for edge in edge_list:
-        display.DisplayShape(edge, update=False, color="black")
-
-    if show_type == "body":
-        ais_out_shape = display.DisplayShape(out_shape, update=False, color=get_mechanical_color(MECHANICAL_COLORS))
 
 
-    if save_path is not None:
-        # 保存
-        display.Repaint()
-        display.View.Dump(save_path)
 
-    else:    
-        start_display()
-
-
-def run(args):
-    out_shape = get_BRep_from_file(args.file_path)
-    points = get_points_from_BRep(out_shape)
-    # print("cooradinate:", points)
-    # print("number of vertices:", len(points))
-    random.seed(42)
-    save_path = args.file_path.replace(".json", ".png").replace("_json", "_img")
-    # show_BRep(out_shape=out_shape, show_type=args.show_type, save_path=save_path)
-    save_BRep_img(out_shape, save_path)
 
 
 class ARGS:
