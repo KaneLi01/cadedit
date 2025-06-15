@@ -1,7 +1,8 @@
-vaild_train_dataset_names.json
-记录有效shape名称，由若干字典组成，每个字典的 键'file_names' 代表根据 键'explaination' 筛选出的shape
-- init dataset：初步筛选出的9187个文件
-- complex：筛选复杂的面数
+divide_mv_train_test_val.sh 用于将某个目录下的文件划分为train/test/val，并复制到对应类型的目录
+correct_img.py 若干对图像数据集处理的脚本
+vaild_train_dataset_names.json 记录有效shape名称，由若干字典组成，每个字典的 键'file_names' 代表根据 键'explaination' 筛选出的shape
+filter_data.py 根据不同条件筛选shape，也包括计算视角等工具
+put_dataset_together.sh 将某个目录下的所有子目录中的文件放到一个大目录中
 
 
 数据集制作的流程：

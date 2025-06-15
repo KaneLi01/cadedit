@@ -7,7 +7,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cadlib.extrude import CADSequence
-from cadlib.visualize import vec2CADsolid, create_CAD, get_wireframe_from_body
+from cadlib.visualize import vec2CADsolid, create_CAD
 from cadlib.Brep_utils import get_BRep_from_file,  get_wires
 from OCC.Core.Quantity import Quantity_Color, Quantity_TOC_RGB, Quantity_NOC_BLACK
 from OCC.Core.V3d import  V3d_DirectionalLight
@@ -28,6 +28,7 @@ COLORS = {
     "magenta": Quantity_Color(1.0, 0.0, 1.0, Quantity_TOC_RGB),   # 品红
     "white": Quantity_Color(1.0, 1.0, 1.0, Quantity_TOC_RGB),     # 白色
     "black": Quantity_Color(0.0, 0.0, 0.0, Quantity_TOC_RGB),     # 黑色
+
 }
 
 
@@ -65,7 +66,7 @@ def get_random_color(a1, a2):
 
 def display_BRep(shape=None, wire_list=None):
     """
-    用于在线渲染形状或线框，或二者合并
+    用于在线渲染形状或线框，或二者合并。用于调试。
     """
 
     if shape == None and wire_list == None:
@@ -92,148 +93,46 @@ def display_BRep(shape=None, wire_list=None):
     start_display()
 
 
+def save_BRep(output_path, shape=None, wire_list=None,
+              cam_pos=[2,2,2], see_at=[0,0,0], bg_color=1.0):
+    '''离线渲染shape'''
 
+    if shape == None and wire_list == None:
+        raise Exception('input at least one item!')
 
-# 要把摄像机位置、shape颜色等随机信息作为参数传入，写一个新函数
-def save_BRep_img(shape, output_path=None, seed=42):
-    random.seed(seed)  # 确保每个数据的初始和修改后相同
-    
-    offscreen_renderer = Viewer3d()  # 离线渲染
-    offscreen_renderer.Create()  # 初始化
-    # 设置渲染模式为阴影模式，显示面信息
+    offscreen_renderer = Viewer3d()  
+    offscreen_renderer.Create()  
     offscreen_renderer.SetModeShaded()
     offscreen_renderer.SetSize(512, 512)
-
-    # 给物品添加材质
-    ais_shape = AIS_Shape(shape)
-    random_material = random.choice(MATERIALS)
-    material = Graphic3d_MaterialAspect(random_material)
-    offscreen_renderer.Context.SetMaterial(ais_shape, material, True)
-    shape_color = get_random_color(0.05, 0.15)
-    offscreen_renderer.Context.SetColor(ais_shape, shape_color, True)
-    offscreen_renderer.Context.Display(ais_shape, True)
-
-    # 添加光源
-    light_color = get_random_color(0.9, 1.0)  
-    # 随机方向
-    random_dir = gp_Dir(random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))
-    light = V3d_DirectionalLight(random_dir, light_color, True)  # 创建光源
-    light.SetIntensity(1.0)  # 设置光强
-    offscreen_renderer.Viewer.AddLight(light)  # 将光源添加到渲染器
-    offscreen_renderer.Viewer.SetLightOn()  # 打开光源
-
-    # 设置摄像机
-    random.seed(seed)
-    x_eye = random.uniform(1.1, 1.5)
-    y_eye = random.uniform(0.6, 0.8)
-    z_eye = random.uniform(0.6, 0.8)
-    offscreen_renderer.View.SetEye(x_eye, y_eye, z_eye)  # 设置摄像机位置
-    offscreen_renderer.View.SetAt(0.1, 0.3, 0.3) 
-    offscreen_renderer.View.SetScale(400)
-
-    # 设置背景颜色
-    bg_color = get_random_color(0.75, 1.0)
-    offscreen_renderer.View.SetBgGradientColors(bg_color,bg_color)
-
-
-    # 绘制线框为黑色（保证离散形状的线框）
-    edge_list = get_wires(shape) 
-    for edge in edge_list:
-        offscreen_renderer.DisplayShape(edge, update=False, color="black")
-
-
-    offscreen_renderer.Repaint()
-    offscreen_renderer.View.Dump(output_path)
-
-
-def save_BRep_wire_img_temp(wire_list, campos=[2,2,2], seeat=[0,0,0],output_path=None):
-    
-    offscreen_renderer = Viewer3d()  # 离线渲染
-    offscreen_renderer.Create()  # 初始化
-    # 设置渲染模式为阴影模式，显示面信息
-    offscreen_renderer.SetModeShaded()
-    offscreen_renderer.SetSize(512, 512)
-
-    # 设置摄像机
-    offscreen_renderer.View.SetEye(campos[0], campos[1], campos[2])  # 设置摄像机位置
-    offscreen_renderer.View.SetAt(seeat[0], seeat[1], seeat[2]) 
     offscreen_renderer.SetPerspectiveProjection()
 
+    # 设置摄像机
+    offscreen_renderer.View.SetEye(cam_pos[0], cam_pos[1], cam_pos[2])  
+    offscreen_renderer.View.SetAt(see_at[0], see_at[1], see_at[2]) 
+
     # 设置背景颜色
-    bg_color = get_random_color(1.0, 1.0)
+    bg_color = get_random_color(bg_color, bg_color)
     offscreen_renderer.View.SetBgGradientColors(bg_color,bg_color)
 
-    # 绘制线框为黑色（保证离散形状的线框）
-    for edge in wire_list:
-        ais_edge = AIS_Shape(edge)
-        ais_edge.SetWidth(2.0)  # 设置线宽
-        ais_edge.SetColor(Quantity_Color(Quantity_NOC_BLACK))
-        offscreen_renderer.Context.Display(ais_edge, False)
-
+    if wire_list is not None:
+        for wire in wire_list:
+            ais_wire = AIS_Shape(wire)
+            ais_wire.SetWidth(2.0)  # 设置线宽
+            ais_wire.SetColor(Quantity_Color(Quantity_NOC_BLACK))
+            offscreen_renderer.Context.Display(ais_wire, False)
+    
+    if shape is not None:
+        offscreen_renderer.DisplayShape(shape, update=False, color=Quantity_Color(0.1, 0.1, 0.1, Quantity_TOC_RGB))
+    
     offscreen_renderer.Repaint()
+    # offscreen_renderer.FitAll()
+    # c = offscreen_renderer.GetCamera()
+    # e = c.Eye()
+    # ce = c.Center()
+    # print(ce.X(),ce.Y(),ce.Z())
+    # print(e.X(),e.Y(),e.Z())
+    
     offscreen_renderer.View.Dump(output_path)
-
-
-def save_BRep_wire_img_display_temp(wire_list, campos=[2,2,2], seeat=[0,0,0],output_path=None):
-    
-    display, start_display, _, _ = init_display(size=(512,512))
-    
-
-    # 设置摄像机
-    display.View.SetEye(campos[0], campos[1], campos[2])  # 设置摄像机位置
-    display.View.SetAt(seeat[0], seeat[1], seeat[2]) 
-    # display.View.SetScale(1000)
-    display.SetPerspectiveProjection()
-
-    # 设置背景颜色
-    bg_color = get_random_color(1.0, 1.0)
-    display.View.SetBgGradientColors(bg_color,bg_color)
-
-
-    # 绘制线框为黑色（保证离散形状的线框）
-    for edge in wire_list:
-        display.DisplayShape(edge, update=False, color="black")
-
-    display.Repaint()
-    display.View.Dump(output_path)
-
-
-def save_BRep_wire_img(wire_list, output_path=None, seed=42):
-    random.seed(seed)  # 确保每个数据的初始和修改后相同
-    
-    offscreen_renderer = Viewer3d()  # 离线渲染
-    offscreen_renderer.Create()  # 初始化
-    # 设置渲染模式为阴影模式，显示面信息
-    offscreen_renderer.SetModeShaded()
-    offscreen_renderer.SetSize(512, 512)
-
-    # 设置摄像机
-    random.seed(seed)
-    x_eye = random.uniform(1.1, 1.5)
-    y_eye = random.uniform(0.6, 0.8)
-    z_eye = random.uniform(0.6, 0.8)
-    offscreen_renderer.View.SetEye(x_eye, y_eye, z_eye)  # 设置摄像机位置
-    offscreen_renderer.View.SetAt(0.1, 0.3, 0.3) 
-    offscreen_renderer.View.SetScale(400)
-
-    # 设置背景颜色
-    bg_color = get_random_color(1.0, 1.0)
-    offscreen_renderer.View.SetBgGradientColors(bg_color,bg_color)
-
-    # 绘制线框为黑色（保证离散形状的线框）
-    for edge in wire_list:
-        ais_edge = AIS_Shape(edge)
-        ais_edge.SetWidth(5.0)  # 设置线宽
-        ais_edge.SetColor(Quantity_Color(Quantity_NOC_BLACK))
-        offscreen_renderer.Context.Display(ais_edge, False)
-
-    offscreen_renderer.Repaint()
-    offscreen_renderer.View.Dump(output_path)
-
-
-
-
-
 
 
 class ARGS:

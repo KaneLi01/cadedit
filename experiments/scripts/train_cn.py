@@ -147,7 +147,7 @@ def main():
                             prompt_embeds=prompt_embeds,
                             pooled_prompt_embeds=pooled_prompt_embeds,
                             negative_prompt_embeds=torch.zeros_like(prompt_embeds),
-                            negative_pooled_prompt_embeds=torch.zeros_like(pooled_prompt_embeds),
+                                                                                                                    
                             image=test_sketch_image,
                             num_inference_steps=20,
                             guidance_scale=7.5,

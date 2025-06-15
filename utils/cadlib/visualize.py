@@ -25,16 +25,6 @@ def vec2CADsolid(vec, is_numerical=True, n=256):
     return cad
 
 
-def get_wireframe_from_body(body):
-    """提取 body 的所有边，构建线框"""
-    wire_builder = BRepBuilderAPI_MakeWire()
-    explorer = TopExp_Explorer(body, TopAbs_EDGE)
-    while explorer.More():
-        edge = explorer.Current()
-        wire_builder.Add(edge)
-        explorer.Next()
-    return wire_builder.Wire()
-
 
 def create_CAD(cad_seq: CADSequence):
     """create a 3D CAD model from CADSequence. Only support extrude with boolean operation."""

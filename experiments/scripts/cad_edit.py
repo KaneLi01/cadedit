@@ -30,7 +30,7 @@ def load_inference_models(args):
     
     # 加载训练好的ControlNet
     controlnet = ControlNetModel.from_pretrained(args.controlnet_path)
-    trained_cn_path = os.path.join(args.parent_cn_path, args.index, "ckpt/controlnet_epoch3.pth")  # 如果不是则需要修改
+    trained_cn_path = os.path.join(args.parent_cn_path, args.index, "ckpt/controlnet.pth")  # 如果不是则需要修改
     controlnet.load_state_dict(torch.load(trained_cn_path))
     
     # 加载投影器
@@ -89,7 +89,7 @@ def infer(args, input_image_path, sketch_image_path, output_path, models, num_in
         # image_embeds = projector1(image_embeds.transpose(1, 2)).transpose(1, 2)
         # image_embeds = projector2(image_embeds)
 
-        prompt_embeds = image_embeds
+        prompt_embeds = torch.cat([image_embeds, image_embeds], dim=0)
         pooled_prompt_embeds = image_embeds.mean(dim=1)
 
         # 生成图像
@@ -98,6 +98,9 @@ def infer(args, input_image_path, sketch_image_path, output_path, models, num_in
 
         output = inference_pipe(
             prompt_embeds=prompt_embeds,
+            pooled_prompt_embeds=pooled_prompt_embeds,
+            negative_prompt_embeds=torch.zeros_like(prompt_embeds),
+            negative_pooled_prompt_embeds=torch.zeros_like(pooled_prompt_embeds),
             image=sketch_image,  # 控制图像
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
@@ -108,7 +111,8 @@ def infer(args, input_image_path, sketch_image_path, output_path, models, num_in
     return output
 
 if __name__ == "__main__":
-    args = AppConfig.from_cli()
+    config_json_path = '/home/lkh/siga/CADIMG/config/cad_edit_config.json'
+    args = AppConfig.from_cli(config_json_path)
 
     # 加载模型
     models = load_inference_models(args)
@@ -129,6 +133,6 @@ if __name__ == "__main__":
     sketch_image_path = args.test_sketch_path
     input_name = input_image_path.split('/')[-1].split('.')[0]
     sketch_name = sketch_image_path.split('/')[-1].split('.')[0]
-    output_path = f'/home/lkh/siga/output/infer/6views/{args.index}_{input_name}{sketch_name}.png'  # 输出图像路径
+    output_path = f'/home/lkh/siga/output/infer/6views/output4/{args.index}_{input_name}{sketch_name}.png'  # 输出图像路径
     result = infer(args, input_image_path, sketch_image_path, output_path, models)
     print(f"Inference completed. Result saved to {output_path}")

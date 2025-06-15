@@ -18,26 +18,6 @@ from OCC.Core.gp import gp_Pnt
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 
 
-class CorrectDataFromJSON():
-    def __init__(self, cad_json_path):
-        self.cad_json_path = cad_json_path
-        self.cad_name = self.cad_json_path.split('/')[-1].split('.')[0]
-        self.cad_seq = Brep_utils_test.get_seq_from_json(self.cad_json_path)
-        self.cad_body_len = len(self.cad_seq.seq)
-        if self.cad_body_len > 1:
-            self.sub_seqs = [self.cad_seq.seq, copy.deepcopy(self.cad_seq.seq[:-1]), copy.deepcopy(self.cad_seq.seq[-1:])]
-            self.shapes = [Brep_utils_test.get_BRep_from_seq(sub_seq) for sub_seq in self.sub_seqs]
-        else: 
-            self.sub_seq = self.cad_seq.seq
-            self.shape = Brep_utils_test.get_BRep_from_seq(self.sub_seq)
-            
-    def save_sketch(self):
-        shape = self.shapes[-1]
-        render_cad.save_BRep_wire_img_display_temp
-
-        pass
-
-
 class ImageProcessor:
     def __init__(self, file_path, output_dir, edit_type='add', edit_path=None, shape_name=None):
         """

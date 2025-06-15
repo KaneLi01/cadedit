@@ -186,13 +186,23 @@ def save_contour():
 
 if __name__ == "__main__":
     
-    base_dir = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/sketch_temp3'
-    up_dir = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/sketch_temp2'
+    base_dir = '/home/lkh/siga/output/infer/6views/base'
+    sketch_dir = '/home/lkh/siga/output/infer/6views/sketch'
+    gt_dir = '/home/lkh/siga/output/infer/6views/gt'
 
-    output_dir = '/home/lkh/siga/dataset/my_dataset/normals_train_dataset/sketch_temp4'
+    output_dir = '/home/lkh/siga/output/infer/6views/output2'
     imgs = os.listdir(base_dir)
     for img in imgs:
-        img_path = os.path.join(base_dir, img)
-        up_img_path = os.path.join(up_dir, img)
-        output_path = os.path.join(output_dir, img)
-        hb_imgs(img_path, up_img_path, output_path)
+        imgs = []
+        base_path = os.path.join(base_dir, img)
+        sketch_path = os.path.join(sketch_dir, img)
+        gt_path = os.path.join(gt_dir, img)
+        out_path = os.path.join(output_dir, img)
+        b = Image.open(base_path)
+        s = Image.open(sketch_path)
+        ss = stack_imgs(b, s)
+        imgs.append(ss)
+        imgs.append(Image.open(gt_path))
+        
+
+        merge_imgs(imgs, out_path)

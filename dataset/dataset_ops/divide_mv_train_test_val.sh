@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# 该脚本用于将某个目录下的文件划分为train/test/val，并移动到对应类型的目录
+# 该脚本用于将某个目录下的文件划分为train/test/val，并复制到对应类型的目录
 
 DIR_ORI="/home/lkh/siga/dataset/my_dataset/normals_train_dataset/normal_img_addbody_6views_temp/sketch_img"  # 待处理的路径
 DIR_TARGET="/home/lkh/siga/dataset/my_dataset/normals_train_dataset/train_dataset_6views/"  # tarin/test/val的父目录
-IMG_TYPE="sketch_target_img"  # 数据类型
+IMG_TYPE="sketch_target_img"  # 复制路径名
 
 DIR_TRAIN=$DIR_TARGET"train/"$IMG_TYPE
 DIR_TEST=$DIR_TARGET"test/"$IMG_TYPE
@@ -28,17 +28,19 @@ split2=$((total * 9 / 10))
 
 # 前 8/10
 for ((i=0; i<split1; i++)); do
-  mv "${files[i]}" "$DIR_TRAIN/"
+  cp "${files[i]}" "$DIR_TRAIN/"
 done
+echo " ($DIR_TRAIN) 文件数量: $(ls -1 "$DIR_TRAIN" | wc -l)"
 
 # 第 8/10 到 9/10
 for ((i=split1; i<split2; i++)); do
-  mv "${files[i]}" "$DIR_TEST/"
+  cp "${files[i]}" "$DIR_TEST/"
 done
+echo " ($DIR_TEST) 文件数量: $(ls -1 "$DIR_TEST" | wc -l)"
 
 # 第 9/10 到 10/10
 for ((i=split2; i<total; i++)); do
-  mv "${files[i]}" "$DIR_VAL/"
+  cp "${files[i]}" "$DIR_VAL/"
 done
+echo " ($DIR_VAL) 文件数量: $(ls -1 "$DIR_VAL" | wc -l)"
 
-echo "文件已移动完毕"

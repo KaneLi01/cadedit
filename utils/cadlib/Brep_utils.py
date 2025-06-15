@@ -7,10 +7,10 @@ from collections import namedtuple
 
 from OCC.Core.TopExp import TopExp_Explorer
 from OCC.Core.TopAbs import TopAbs_VERTEX, TopAbs_EDGE, TopAbs_WIRE, TopAbs_FACE
-from OCC.Core.BRep import BRep_Tool
+from OCC.Core.BRep import BRep_Tool, BRep_Builder
 from OCC.Core.TopoDS import TopoDS_Compound, TopoDS_Shape, TopoDS_Wire, TopoDS_Edge, TopoDS_Face
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeWire
-from OCC.Core.BRepTools import breptools_OuterWire
+from OCC.Core.BRepTools import breptools_OuterWire, breptools
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
@@ -18,6 +18,9 @@ from OCC.Core.gp import gp_Pnt
 from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop
 from OCC.Core.BRepExtrema import BRepExtrema_DistShapeShape
+from OCC.Core.STEPControl import STEPControl_Reader
+from OCC.Core.IFSelect import IFSelect_RetDone
+
 
 @dataclass
 class Point:
@@ -59,7 +62,20 @@ def get_BRep_from_file(file_path):
         return out_shape
     except Exception as e:
         print("load and create failed.", e)
+
+
+def get_BRep_from_step(file_path):
+    """读取STEP文件并返回TopoDS_Shape对象"""
+    reader = STEPControl_Reader()
+    status = reader.ReadFile(file_path)
     
+    if status != IFSelect_RetDone:
+        raise ValueError("STEP文件读取失败")
+    
+    reader.TransferRoots()  # 转换几何实体
+    shape = reader.OneShape()  # 获取合并后的形状
+    return shape
+
 
 def get_bbox(shape: TopoDS_Compound):
     """获取shape的包围盒"""
@@ -170,3 +186,75 @@ def test_create_2boxs(mode='intersection'):
     box2 = BRepPrimAPI_MakeBox(p2, 1, 1, 1).Solid()
     return box1, box2
     
+
+def read_x_t_file(file_path):
+    """读取单个.x_t文件并返回TopoDS_Shape对象"""
+    # 因版本问题不可用
+    shape = TopoDS_Shape()
+    builder = BRep_Builder()
+    status = breptools.Read(shape, file_path, builder)
+    if not status:
+        raise ValueError(f"Failed to read file: {file_path}")
+    return shape
+
+
+def explore_shape(shape, level=0):
+    from OCC.Core.TopoDS import TopoDS_Compound, TopoDS_Shape
+    from OCC.Core.TopAbs import TopAbs_COMPOUND, TopAbs_SOLID, TopAbs_SHELL, TopAbs_FACE
+    from OCC.Core.TopExp import TopExp_Explorer
+
+
+    """仅打印直接子层级（非递归）"""
+    shape_type = shape.ShapeType()
+    
+    # 类型映射
+    type_names = {
+        TopAbs_COMPOUND: "COMPOUND",
+        TopAbs_SOLID: "SOLID",
+        TopAbs_SHELL: "SHELL",
+        TopAbs_FACE: "FACE"
+    }
+    
+    print(f"父形状: {type_names.get(shape_type, 'UNKNOWN')} (子级数量: {shape.NbChildren()})")
+    
+    # 初始化探索器（遍历所有直接子级）
+    explorer = TopExp_Explorer()
+    explorer.Init(shape, TopAbs_COMPOUND)  # 可替换为TopAbs_SOLID等
+    
+    childs = []
+
+    # 仅遍历直接子级
+    while explorer.More():
+        child = explorer.Current()
+        child_type = child.ShapeType()
+        print(f"  └─ {type_names.get(child_type, 'UNKNOWN')} (子级数量: {child.NbChildren()})")
+        childs.append(child)
+        explorer.Next()
+    return childs
+
+
+def get_first_level_shapes(shape):
+    from OCC.Core.TopoDS import TopoDS_Iterator, TopoDS_Shape
+    from OCC.Core.TopAbs import TopAbs_VERTEX, TopAbs_EDGE, TopAbs_FACE, TopAbs_SOLID
+    it = TopoDS_Iterator(shape)  # 初始化迭代器
+    count = 0
+
+    childs = []
+    while it.More():  # 检查是否还有子形状
+        child = it.Value()  # 获取当前子形状
+        count += 1
+
+        # 打印子形状的类型
+        if child.ShapeType() == TopAbs_VERTEX:
+            print(f"Child {count}: VERTEX")
+        elif child.ShapeType() == TopAbs_EDGE:
+            print(f"Child {count}: EDGE")
+        elif child.ShapeType() == TopAbs_FACE:
+            print(f"Child {count}: FACE")
+        elif child.ShapeType() == TopAbs_SOLID:
+            print(f"Child {count}: SOLID")
+        childs.append(child)
+        it.Next()  # 移动到下一个子形状
+
+    print(f"Total children: {count}")
+    return childs
