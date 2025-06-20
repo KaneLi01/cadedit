@@ -161,9 +161,9 @@ def write_filter_json(json_path, filter: str, names: list):
 
 
 def test():
-    dir1 = '/home/lkh/siga/dataset/ABC/abc_obj/00'
+    dir1 = '/home/lkh/siga/dataset/ABC/temp/step/02'
     dir2 = '/home/lkh/siga/output/temp'
-    check_subidrs_num(dir1, n=0, mode='del')
+    check_subidrs_num(dir1, n=0, mode='check')
 
 
 

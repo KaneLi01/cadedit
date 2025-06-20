@@ -70,7 +70,7 @@ def get_BRep_from_step(file_path):
     status = reader.ReadFile(file_path)
     
     if status != IFSelect_RetDone:
-        raise ValueError("STEP文件读取失败")
+        return None
     
     reader.TransferRoots()  # 转换几何实体
     shape = reader.OneShape()  # 获取合并后的形状
@@ -78,9 +78,11 @@ def get_BRep_from_step(file_path):
 
 
 def get_bbox(shape: TopoDS_Compound):
+    from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
     """获取shape的包围盒"""
     bbox = Bnd_Box()
-
+    mesh = BRepMesh_IncrementalMesh(shape, 0.1)
+    mesh.Perform()
     brepbndlib.Add(shape, bbox)
 
     xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
@@ -89,6 +91,18 @@ def get_bbox(shape: TopoDS_Compound):
     center=Point((xmin + xmax) / 2, (ymin + ymax) / 2, (zmin + zmax) / 2)
 
     return BBox(min, max, center)
+
+
+def get_vertices(shape):
+    """获取shape的顶点"""
+    vertices_list = set()  # 存储边的列表
+    explorer = TopExp_Explorer(shape, TopAbs_VERTEX)  # 遍历 Compound 中的边
+    while explorer.More():
+        point = explorer.Current()  # 获取当前边 
+        vertices_list.add(point)
+        explorer.Next()
+
+    return vertices_list  # 返回生成的线框
 
 
 def get_wires(shape):
@@ -187,17 +201,6 @@ def test_create_2boxs(mode='intersection'):
     return box1, box2
     
 
-def read_x_t_file(file_path):
-    """读取单个.x_t文件并返回TopoDS_Shape对象"""
-    # 因版本问题不可用
-    shape = TopoDS_Shape()
-    builder = BRep_Builder()
-    status = breptools.Read(shape, file_path, builder)
-    if not status:
-        raise ValueError(f"Failed to read file: {file_path}")
-    return shape
-
-
 def explore_shape(shape, level=0):
     from OCC.Core.TopoDS import TopoDS_Compound, TopoDS_Shape
     from OCC.Core.TopAbs import TopAbs_COMPOUND, TopAbs_SOLID, TopAbs_SHELL, TopAbs_FACE
@@ -244,17 +247,17 @@ def get_first_level_shapes(shape):
         child = it.Value()  # 获取当前子形状
         count += 1
 
-        # 打印子形状的类型
-        if child.ShapeType() == TopAbs_VERTEX:
-            print(f"Child {count}: VERTEX")
-        elif child.ShapeType() == TopAbs_EDGE:
-            print(f"Child {count}: EDGE")
-        elif child.ShapeType() == TopAbs_FACE:
-            print(f"Child {count}: FACE")
-        elif child.ShapeType() == TopAbs_SOLID:
-            print(f"Child {count}: SOLID")
+        # # 打印子形状的类型
+        # if child.ShapeType() == TopAbs_VERTEX:
+        #     print(f"Child {count}: VERTEX")
+        # elif child.ShapeType() == TopAbs_EDGE:
+        #     print(f"Child {count}: EDGE")
+        # elif child.ShapeType() == TopAbs_FACE:
+        #     print(f"Child {count}: FACE")
+        # elif child.ShapeType() == TopAbs_SOLID:
+        #     print(f"Child {count}: SOLID")
         childs.append(child)
         it.Next()  # 移动到下一个子形状
 
-    print(f"Total children: {count}")
+    # print(f"Total children: {count}")
     return childs
