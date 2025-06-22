@@ -188,8 +188,14 @@ def test():
 
 
 def main():
-    args = get_args()
-    cad_info2json(args)
+    try:
+
+        args = get_args()
+        cad_info2json(args)
+
+    except Exception as e:
+        print(f"[Error] 程序执行出错: {e}", file=sys.stderr)
+        sys.exit(1)  # 非0表示出错    
 
     # test()
 

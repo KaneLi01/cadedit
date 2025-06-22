@@ -9,8 +9,8 @@ touch "$JSON_PATH"
 # 删除最后一行 
 # sed -i '$d' "$JSON_PATH"
 
-# 读取删除后的新最后一行
 if [ -s "$JSON_PATH" ]; then
+    sed -i '$d' "$JSON_PATH"
     last_line=$(tail -n 1 "$JSON_PATH")
     name=$(echo "$last_line" | jq -r '.name')
     processed_name=${name: -4}
@@ -42,9 +42,15 @@ for subdir in "$UNZIP_INDEX_DIR"/*; do
 
             if [ "$file_count" -eq 1 ]; then
                 echo "Processing $NAME with 1 file: $file_path"
-                python /home/lkh/siga/CADIMG/dataset/dataset_ops/filter_data_ABC.py \
-                    --step_path "$file_path" \
-                    --json_path "$JSON_PATH"
+
+                if ! timeout 60s python /home/lkh/siga/CADIMG/dataset/dataset_ops/filter_data_ABC.py \
+                        --step_path "$file_path" \
+                        --json_path "$JSON_PATH"; then
+                    echo "timeout: $file_path"
+                    printf '{"name": "%s", "valid": false, "child_num": null, "face_num": null, "wire_num": null, "bbox_min_max": null, "bbox_center": null}\n' \
+                        "$NAME" >> "$JSON_PATH"                    
+                fi
+
             else
                 echo "  Invalid → writing fallback JSONL entry for $NAME"
                 printf '{"name": "%s", "valid": false, "child_num": null, "face_num": null, "wire_num": null, "bbox_min_max": null, "bbox_center": null}\n' \
